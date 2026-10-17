@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import { Xquare_colors } from "../../../styles/colors";
+import { Xquare_colors } from "../../../index";
 
 const LABEL_FONT_SIZE = "14px";
 const LABEL_FONT_WEIGHT = "600";

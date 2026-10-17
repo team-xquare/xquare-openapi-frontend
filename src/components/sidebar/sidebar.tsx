@@ -1,7 +1,8 @@
 import { useCallback } from "react";
 import { usePathname } from "next/navigation";
-import { SidebarHeader } from "./header/sidebar-header";
-import { SidebarItem } from "./item/sidebar-item";
+import { SidebarFooter } from "./index";
+import { SidebarHeader } from "./index";
+import { SidebarItem } from "./index";
 import {
   SidebarContainer,
   SidebarContent,
@@ -23,10 +24,7 @@ interface SidebarProps {
   onNavItemClick: (itemId: string) => void;
 }
 
-function Sidebar({
-  navItems,
-  onNavItemClick,
-}: SidebarProps) {
+function Sidebar({ navItems, onNavItemClick }: SidebarProps) {
   const pathname = usePathname();
 
   const isMatch = (basePath?: string) =>
@@ -66,9 +64,7 @@ function Sidebar({
           <SidebarOverview
             type="button"
             onClick={() => handleMainItemClick(overviewItem.id)}
-            aria-current={
-              activeItemId === overviewItem.id ? "page" : undefined
-            }
+            aria-current={activeItemId === overviewItem.id ? "page" : undefined}
           >
             {overviewItem.label}
           </SidebarOverview>
@@ -87,6 +83,7 @@ function Sidebar({
           </SidebarNavContainer>
         </SidebarNavContent>
       </SidebarContent>
+      <SidebarFooter />
     </SidebarContainer>
   );
 }
