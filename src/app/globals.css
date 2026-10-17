@@ -15,7 +15,7 @@ body {
 body,
 button {
   font-family:
-    Pretendard,
+    var(--font-pretendard),
     -apple-system,
     BlinkMacSystemFont,
     system-ui,
