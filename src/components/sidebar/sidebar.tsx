@@ -12,6 +12,7 @@ import {
   SidebarSectionTitle,
 } from "./sidebar-style";
 
+// 공통 sidebar 컴포넌트
 interface SidebarNavItem {
   id: string;
   label: string;

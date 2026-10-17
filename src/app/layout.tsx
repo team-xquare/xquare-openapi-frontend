@@ -5,8 +5,8 @@ import AppLayout from "./AppLayout";
 import EmotionRegistry from "./EmotionRegistry";
 
 export const metadata: Metadata = {
-  title: "Xquare",
-  description: "Xquare infrastructure dashboard",
+  title: "XQUARE Open api",
+  description: "Xquare School-Information Access Module",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
