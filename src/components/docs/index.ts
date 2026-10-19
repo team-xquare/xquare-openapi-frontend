@@ -4,5 +4,7 @@ export { InfoList } from "./info-list/info-list";
 export type { InfoListItem } from "./info-list/info-list";
 export { DocSection } from "./section/doc-section";
 export { DocSectionNote } from "./section/doc-section-style";
+export { StepCards } from "./step-cards/step-cards";
+export type { StepCard } from "./step-cards/step-cards";
 export { DocTable } from "./table/doc-table";
 export type { DocTableColumn } from "./table/doc-table";
