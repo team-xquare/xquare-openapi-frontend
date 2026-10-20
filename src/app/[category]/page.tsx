@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { ENDPOINT_GROUPS } from "../all-content";
 import { EndpointListing } from "../endpoint-listing";
 
-const CATEGORY_IDS = ENDPOINT_GROUPS.map((group) => group.id);
+// /notice에는 별도의 공지사항 페이지가 있으므로, 카테고리 경로로 사용하지 않음
+const CATEGORY_IDS = ENDPOINT_GROUPS.filter(
+  (group) => group.id !== "notice",
+).map((group) => group.id);
 
 export function generateStaticParams() {
   return CATEGORY_IDS.map((category) => ({ category }));

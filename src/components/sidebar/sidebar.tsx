@@ -41,15 +41,21 @@ function Sidebar({ navItems, onNavItemClick }: SidebarProps) {
     };
   }, [pathname]);
 
+  // 사이드바 경로 비교 후 이동
   const isMatch = (basePath?: string) =>
     basePath != null &&
     (pathname === basePath || pathname.startsWith(`${basePath}/`));
 
-  const activeItemId = pathname === "/all"
-    ? activeAnchor || "all"
-    : navItems.find(
-        (i) => isMatch(i.path?.split("#")[0]) || i.subItems?.some((s) => isMatch(s.path)),
-      )?.id ?? navItems[0]?.id ?? "";
+  const activeItemId =
+    pathname === "/all"
+      ? activeAnchor || "all"
+      : (navItems.find(
+          (i) =>
+            isMatch(i.path?.split("#")[0]) ||
+            i.subItems?.some((s) => isMatch(s.path)),
+        )?.id ??
+        navItems[0]?.id ??
+        "");
   const overviewItem = navItems.find((item) => item.id === "overview");
   const noticeItem = navItems.find((item) => item.id === "notice");
   const endpointItems = navItems.filter(
@@ -67,6 +73,7 @@ function Sidebar({ navItems, onNavItemClick }: SidebarProps) {
 
   const handleMainItemClick = useCallback(
     (itemId: string) => {
+      if (itemId === "all") setActiveAnchor("");
       onNavItemClick(itemId);
     },
     [onNavItemClick],

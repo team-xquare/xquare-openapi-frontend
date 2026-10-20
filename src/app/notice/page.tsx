@@ -1,13 +1,9 @@
 "use client";
 
+import { PageWelcome } from "../endpoint-listing";
 import {
   EndpointPage,
-  ListHeader,
-  LogoutButton,
   PageDivider,
-  WelcomeCopy,
-  WelcomeHeading,
-  WelcomeLead,
 } from "../all/page-style";
 import {
   NoticeDescription,
@@ -30,13 +26,7 @@ const NOTICES = [
 export default function NoticePage() {
   return (
     <EndpointPage>
-      <ListHeader>
-        <WelcomeCopy>
-          <WelcomeHeading>Welcome, Back jaejun0210</WelcomeHeading>
-          <WelcomeLead>Access school information via xquare</WelcomeLead>
-        </WelcomeCopy>
-        <LogoutButton type="button">로그아웃</LogoutButton>
-      </ListHeader>
+      <PageWelcome />
       <PageDivider />
 
       <NoticeHeading>공지사항</NoticeHeading>

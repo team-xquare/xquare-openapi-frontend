@@ -16,16 +16,22 @@ import {
   WelcomeLead,
 } from "./all/page-style";
 
+export function PageWelcome() {
+  return (
+    <ListHeader>
+      <WelcomeCopy>
+        <WelcomeHeading>Welcome, Back</WelcomeHeading>
+        <WelcomeLead>Access school information via xquare</WelcomeLead>
+      </WelcomeCopy>
+      <LogoutButton type="button">로그아웃</LogoutButton>
+    </ListHeader>
+  );
+}
+
 export function EndpointListing({ groups }: { groups: EndpointGroup[] }) {
   return (
     <EndpointPage>
-      <ListHeader>
-        <WelcomeCopy>
-          <WelcomeHeading>Welcome, Back jaejun0210</WelcomeHeading>
-          <WelcomeLead>Access school information via xquare</WelcomeLead>
-        </WelcomeCopy>
-        <LogoutButton type="button">로그아웃</LogoutButton>
-      </ListHeader>
+      <PageWelcome />
       <PageDivider />
 
       <EndpointList aria-label="엔드포인트 목록">
@@ -36,7 +42,9 @@ export function EndpointListing({ groups }: { groups: EndpointGroup[] }) {
               {group.endpoints.map((endpoint, index) => (
                 <EndpointCard key={`${group.id}-${index}`}>
                   <EndpointMethod>{endpoint.method}</EndpointMethod>
-                  <EndpointDescription>{endpoint.description}</EndpointDescription>
+                  <EndpointDescription>
+                    {endpoint.description}
+                  </EndpointDescription>
                 </EndpointCard>
               ))}
             </div>
