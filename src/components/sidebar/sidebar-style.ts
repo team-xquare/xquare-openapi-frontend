@@ -52,6 +52,27 @@ export const SidebarOverview = styled.button`
   }
 `;
 
+export const SidebarUtilityLink = styled.button`
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: ${Xquare_colors.purple[400]};
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  padding: 0 24px;
+  text-align: left;
+  width: 100%;
+
+  &[aria-current="page"],
+  &:hover,
+  &:focus-visible {
+    color: ${Xquare_colors.white};
+  }
+`;
+
 export const SidebarSectionTitle = styled.h2`
   color: ${Xquare_colors.white};
   font-size: 16px;

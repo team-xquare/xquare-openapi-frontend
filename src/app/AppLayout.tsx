@@ -2,13 +2,11 @@
 
 import React, { type ReactNode } from "react";
 import styled from "@emotion/styled";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Sidebar } from "../components/sidebar";
 
 function AppLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
-
   const navItems = React.useMemo(
     () => [
       // path 별 경로 지정 및 색 변경
@@ -18,7 +16,9 @@ function AppLayout({ children }: { children: ReactNode }) {
       { id: "schedule", label: "일정", path: "/schedule" },
       { id: "club", label: "동아리", path: "/club" },
       { id: "teacher", label: "교직원", path: "/teacher" },
+      { id: "supervisor", label: "자습감독", path: "/supervisor" },
       { id: "student", label: "학생", path: "/student" },
+      { id: "notice", label: "공지", path: "/notice" },
     ],
     [],
   );
@@ -31,7 +31,9 @@ function AppLayout({ children }: { children: ReactNode }) {
       schedule: "/schedule",
       club: "/club",
       teacher: "/teacher",
+      supervisor: "/supervisor",
       student: "/student",
+      notice: "/notice",
     };
 
     const path = routeMap[itemId];
@@ -42,7 +44,7 @@ function AppLayout({ children }: { children: ReactNode }) {
   return (
     <Container>
       <Sidebar navItems={navItems} onNavItemClick={handleNavItemClick} />
-      <Page $isHome={pathname === "/"}>{children}</Page>
+      <Page>{children}</Page>
     </Container>
   );
 }
@@ -53,8 +55,8 @@ const Container = styled.div`
   cursor: default;
 `;
 
-const Page = styled.div<{ $isHome: boolean }>`
-  background-color: ${({ $isHome }) => ($isHome ? "#fff" : "transparent")};
+const Page = styled.div`
+  background-color: #fff;
   margin-left: 280px;
   width: calc(100% - 280px);
   height: 100vh;
