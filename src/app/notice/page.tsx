@@ -14,6 +14,7 @@ import {
   NoticeTableBody,
   NoticeTableHeader,
   NoticeTableRow,
+  NoticeTitleLink,
 } from "./page-style";
 
 export default function NoticePage() {
@@ -36,7 +37,11 @@ export default function NoticePage() {
         <NoticeTableBody>
           {NOTICES.map((notice) => (
             <NoticeTableRow key={notice.id} role="row">
-              <span role="cell">{notice.title}</span>
+              <span role="cell">
+                <NoticeTitleLink href={`/notice/${notice.id}`}>
+                  {notice.title}
+                </NoticeTitleLink>
+              </span>
               <span role="cell">{notice.author}</span>
               {/* 목록에는 작성 시각을 빼고 날짜만 표시 */}
               <span role="cell">{notice.createdAt.slice(0, 10)}</span>
