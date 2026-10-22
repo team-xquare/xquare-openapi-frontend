@@ -61,6 +61,13 @@ function quoteShell(value: string) {
   return `'${value.replace(/'/g, "'\\''")}'`;
 }
 
+function getHeaders(apiKey: string, hasBody: boolean) {
+  return [
+    `X-API-KEY: ${apiKey}`,
+    ...(hasBody ? ["Content-Type: application/json"] : []),
+  ];
+}
+
 function getCurlLines(
   method: HttpMethod,
   url: string,
@@ -115,13 +122,11 @@ export default function ApiTestPage() {
   const [responseTab, setResponseTab] = useState("Body");
 
   const hasBody = method !== "GET";
-  const maskedPassword = "•".repeat(password.length);
-  const headers = [
-    `X-API-KEY: ${apiKey}`,
-    ...(hasBody ? ["Content-Type: application/json"] : []),
-  ];
 
-  // 화면에는 비밀번호를 가리고, 복사할 때만 실제 값을 사용
+  // 화면에는 API 키와 비밀번호를 가리고, 복사할 때만 실제 값을 사용
+  const maskedApiKey = "•".repeat(apiKey.length);
+  const maskedPassword = "•".repeat(password.length);
+  const headers = getHeaders(maskedApiKey, hasBody);
   const bodyLines = [
     "{",
     `  "username": ${JSON.stringify(username)},`,
@@ -139,7 +144,7 @@ export default function ApiTestPage() {
   const copyCurlLines = getCurlLines(
     method,
     url,
-    headers,
+    getHeaders(apiKey, hasBody),
     hasBody ? JSON.stringify({ username, password }) : undefined,
   );
 
@@ -197,9 +202,10 @@ export default function ApiTestPage() {
               <Field>
                 <FieldLabel>X-API-KEY</FieldLabel>
                 <TextInput
+                  type="password"
                   value={apiKey}
                   placeholder="발급받은 API 키를 입력하세요"
-                  autoComplete="off"
+                  autoComplete="new-password"
                   onChange={(event) => setApiKey(event.target.value)}
                 />
               </Field>
