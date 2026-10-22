@@ -242,3 +242,100 @@ export const CodePanel = styled.pre`
   overflow-x: auto;
   padding: 16px;
 `;
+
+export const ResponseCodePanel = styled(CodePanel)`
+  padding: 18px;
+`;
+
+export const ActionList = styled.div`
+  display: flex;
+  gap: 10px;
+`;
+
+export const ActionButton = styled.button`
+  background: ${Xquare_colors.white};
+  border: ${BORDER};
+  border-radius: 8px;
+  color: ${Xquare_colors.slate[900]};
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: normal;
+  padding: 10px 18px;
+
+  &:hover,
+  &:focus-visible {
+    border-color: ${ACCENT_COLOR};
+    outline: none;
+  }
+`;
+
+const CHIP_TONES = {
+  green: {
+    background: Xquare_colors.green[100],
+    color: Xquare_colors.green[500],
+  },
+  blue: { background: Xquare_colors.blue[100], color: ACCENT_COLOR },
+  purple: {
+    background: Xquare_colors.purple[100],
+    color: Xquare_colors.purple[500],
+  },
+};
+
+export const Chip = styled.span<{ tone: keyof typeof CHIP_TONES }>`
+  background: ${(props) => CHIP_TONES[props.tone].background};
+  border-radius: 999px;
+  color: ${(props) => CHIP_TONES[props.tone].color};
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: normal;
+  padding: 6px 12px;
+`;
+
+export const ResponseMeta = styled.span`
+  color: ${Xquare_colors.gray[600]};
+  font-size: 14px;
+  line-height: normal;
+  white-space: nowrap;
+`;
+
+export const HistoryList = styled.ol`
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+`;
+
+export const HistoryItem = styled.li`
+  align-items: center;
+  display: flex;
+  gap: 14px;
+`;
+
+export const HistoryPath = styled.span`
+  color: ${Xquare_colors.slate[900]};
+  font-size: 15px;
+  line-height: normal;
+  margin-right: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+export const HistoryStatus = styled.span<{ isError: boolean }>`
+  color: ${(props) =>
+    props.isError ? Xquare_colors.red[600] : Xquare_colors.green[500]};
+  font-size: 14px;
+  font-weight: 700;
+  line-height: normal;
+`;
+
+export const HistoryTime = styled.time`
+  color: ${Xquare_colors.gray[600]};
+  font-size: 14px;
+  line-height: normal;
+`;
