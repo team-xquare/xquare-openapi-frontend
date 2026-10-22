@@ -4,6 +4,8 @@ import { Xquare_colors, Xquare_fonts } from "../../index";
 const BORDER = `1px solid ${Xquare_colors.slate[400]}`;
 const ACCENT_COLOR = Xquare_colors.blue[400];
 const PLACEHOLDER_COLOR = "#8C9199";
+// 사이드바(280px)를 뺀 본문이 좁아 요청 바에 기본 URL이 다 안 보이는 폭
+const REQUEST_BAR_NARROW = "@media (max-width: 900px)";
 
 export const ApiTestContainer = styled.main`
   display: flex;
@@ -39,10 +41,16 @@ export const ApiTestLead = styled.p`
   margin: 0;
 `;
 
+// 좁은 화면에서는 URL 입력칸이 한 줄을 다 쓰도록 세로로 쌓음
 export const RequestBar = styled.div`
   align-items: center;
   display: flex;
   gap: 12px;
+
+  ${REQUEST_BAR_NARROW} {
+    align-items: stretch;
+    flex-direction: column;
+  }
 `;
 
 export const MethodSelectWrap = styled.label`
@@ -74,6 +82,10 @@ export const MethodSelect = styled.select`
   font-weight: 700;
   line-height: 20px;
   padding: 14px 32px 14px 18px;
+
+  ${REQUEST_BAR_NARROW} {
+    width: 100%;
+  }
 
   &:focus-visible {
     border-color: ${ACCENT_COLOR};
