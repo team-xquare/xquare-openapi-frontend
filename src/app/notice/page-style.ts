@@ -1,4 +1,5 @@
 import styled from "@emotion/styled";
+import Link from "next/link";
 
 export const NoticeHeading = styled.h2`
   color: #111;
@@ -55,6 +56,14 @@ export const NoticeTableRow = styled.div`
   span:nth-child(3) {
     color: #7b8494;
     font-size: 12px;
+  }
+`;
+
+export const NoticeTitleLink = styled(Link)`
+  &:hover,
+  &:focus-visible {
+    color: #9650fa;
+    text-decoration: underline;
   }
 `;
 

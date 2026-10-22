@@ -1,6 +1,7 @@
 "use client";
 
 import { PageWelcome } from "../endpoint-listing";
+import { NOTICES } from "../notice-content";
 import {
   EndpointPage,
   PageDivider,
@@ -13,15 +14,8 @@ import {
   NoticeTableBody,
   NoticeTableHeader,
   NoticeTableRow,
+  NoticeTitleLink,
 } from "./page-style";
-
-const NOTICES = [
-  { title: "9월 급식 변경 안내", author: "김영희", date: "2026-09-03" },
-  { title: "2학기 동아리 모집 안내", author: "홍길동", date: "2026-09-01" },
-  { title: "체육대회 일정 공지", author: "이진경", date: "2026-08-28" },
-  { title: "기숙사 점호 시간 변경", author: "정은진", date: "2026-08-25" },
-  { title: "9월 자습 감독 배정", author: "홍길동", date: "2026-08-20" },
-];
 
 export default function NoticePage() {
   return (
@@ -42,10 +36,15 @@ export default function NoticePage() {
         </NoticeTableHeader>
         <NoticeTableBody>
           {NOTICES.map((notice) => (
-            <NoticeTableRow key={notice.title} role="row">
-              <span role="cell">{notice.title}</span>
+            <NoticeTableRow key={notice.id} role="row">
+              <span role="cell">
+                <NoticeTitleLink href={`/notice/${notice.id}`}>
+                  {notice.title}
+                </NoticeTitleLink>
+              </span>
               <span role="cell">{notice.author}</span>
-              <span role="cell">{notice.date}</span>
+              {/* 목록에는 작성 시각을 빼고 날짜만 표시 */}
+              <span role="cell">{notice.createdAt.slice(0, 10)}</span>
             </NoticeTableRow>
           ))}
         </NoticeTableBody>
