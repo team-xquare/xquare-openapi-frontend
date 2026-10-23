@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { ApplyConfirmModal } from "./apply-confirm-modal";
 import {
   ApplyContainer,
@@ -17,6 +18,7 @@ import {
 } from "./page-style";
 
 export default function ApplyPage() {
+  const router = useRouter();
   const [serviceName, setServiceName] = useState("team-xquare");
   const [purpose, setPurpose] = useState("");
   const [serviceUrl, setServiceUrl] = useState("TEST.TEST.COM");
@@ -85,7 +87,14 @@ export default function ApplyPage() {
         </CompleteButton>
       </ApplyForm>
       {isConfirmOpen && (
-        <ApplyConfirmModal onClose={() => setIsConfirmOpen(false)} />
+        <ApplyConfirmModal
+          onClose={() => setIsConfirmOpen(false)}
+          onConfirm={() =>
+            router.push(
+              `/apply/success?serviceName=${encodeURIComponent(serviceName.trim())}`,
+            )
+          }
+        />
       )}
     </ApplyContainer>
   );

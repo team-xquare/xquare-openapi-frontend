@@ -4,9 +4,10 @@ import { Modal } from "../../components/modal";
 
 interface ApplyConfirmModalProps {
   onClose: () => void;
+  onConfirm: () => void;
 }
 
-export function ApplyConfirmModal({ onClose }: ApplyConfirmModalProps) {
+export function ApplyConfirmModal({ onClose, onConfirm }: ApplyConfirmModalProps) {
   return (
     <Modal
       title="이 내용으로 신청할까요?"
@@ -20,6 +21,7 @@ export function ApplyConfirmModal({ onClose }: ApplyConfirmModalProps) {
       confirmLabel="신청하기"
       cancelLabel="다시 확인"
       onClose={onClose}
+      onConfirm={onConfirm}
     />
   );
 }
