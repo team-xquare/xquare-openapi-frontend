@@ -2,11 +2,16 @@
 
 import React, { type ReactNode } from "react";
 import styled from "@emotion/styled";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "../components/sidebar";
+
+// 사이드바 없이 화면 전체를 쓰는 페이지
+const FULL_SCREEN_PATHS = ["/login"];
 
 function AppLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const isFullScreen = FULL_SCREEN_PATHS.includes(pathname);
   const navItems = React.useMemo(
     () => [
       // path 별 경로 지정 및 색 변경
@@ -43,8 +48,11 @@ function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <Container>
-      <Sidebar navItems={navItems} onNavItemClick={handleNavItemClick} />
-      <Page>{children}</Page>
+      {/* Page 위치가 바뀌면 보존 중인 페이지 상태가 초기화되므로 사이드바만 조건부로 렌더링 */}
+      {!isFullScreen && (
+        <Sidebar navItems={navItems} onNavItemClick={handleNavItemClick} />
+      )}
+      <Page isFullScreen={isFullScreen}>{children}</Page>
     </Container>
   );
 }
@@ -55,10 +63,10 @@ const Container = styled.div`
   cursor: default;
 `;
 
-const Page = styled.div`
+const Page = styled.div<{ isFullScreen: boolean }>`
   background-color: #fff;
-  margin-left: 280px;
-  width: calc(100% - 280px);
+  margin-left: ${(props) => (props.isFullScreen ? "0" : "280px")};
+  width: ${(props) => (props.isFullScreen ? "100%" : "calc(100% - 280px)")};
   height: 100vh;
   overflow-y: auto;
   cursor: default;
