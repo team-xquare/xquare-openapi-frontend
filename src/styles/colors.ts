@@ -42,6 +42,7 @@ export const Xquare_colors: ColorGroup = {
 
   purple: {
     100: "#F2E9FE",
+    200: "#BE9DE8",
     400: "#8A38F5",
     500: "#9650FA",
     600: "#433459",
