@@ -1,6 +1,8 @@
 export interface EndpointItem {
   method: "GET";
   description: string;
+  // 상세 페이지가 있으면 /{그룹 id}/{detailId}로 이동
+  detailId?: string;
 }
 
 export interface EndpointGroup {
@@ -44,7 +46,9 @@ export const ENDPOINT_GROUPS: EndpointGroup[] = [
   {
     id: "student",
     title: "학생",
-    endpoints: [{ method: "GET", description: "학생 정보 조회" }],
+    endpoints: [
+      { method: "GET", description: "학생 정보 조회", detailId: "get-student" },
+    ],
   },
   {
     id: "notice",
