@@ -1,4 +1,5 @@
 import styled from "@emotion/styled";
+import Link from "next/link";
 
 export const EndpointPage = styled.main`
   margin: 0 auto;
@@ -111,6 +112,11 @@ export const EndpointCard = styled.article`
     align-items: flex-start;
     gap: 10px;
   }
+`;
+
+export const EndpointCardLink = styled(Link)`
+  border-radius: 4px;
+  display: block;
 `;
 
 export const EndpointMethod = styled.span`

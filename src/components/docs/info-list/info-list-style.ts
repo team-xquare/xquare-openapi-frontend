@@ -5,18 +5,28 @@ export const InfoListContainer = styled.dl`
   border-bottom: 1px solid ${Xquare_colors.slate[400]};
   border-top: 1px solid ${Xquare_colors.slate[400]};
   color: ${Xquare_colors.slate[900]};
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 0;
   padding: 24px 0;
   width: 100%;
 `;
 
-export const InfoListRow = styled.div`
+// 반쪽 항목도 좁은 화면에서는 한 줄을 다 씀
+export const InfoListRow = styled.div<{
+  isHalf: boolean;
+  isLabelCentered: boolean;
+}>`
+  align-items: ${(props) => (props.isLabelCentered ? "center" : "stretch")};
   display: flex;
   gap: 20px;
-  width: 100%;
+  grid-column: ${(props) => (props.isHalf ? "auto" : "1 / -1")};
+  min-width: 0;
+
+  @media (max-width: 1200px) {
+    grid-column: 1 / -1;
+  }
 `;
 
 export const InfoListKey = styled.dt<{ labelWidth: number }>`
