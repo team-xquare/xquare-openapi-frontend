@@ -1,0 +1,28 @@
+name: Linear
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: [develop, main]
+
+permissions: {}
+
+jobs:
+  issue-link:
+    name: Linear 이슈 연결 확인
+    runs-on: ubuntu-latest
+    steps:
+      # 브랜치명·PR 제목·본문 중 한 곳에 OPN-숫자가 있어야 Linear 이슈에 연결된다.
+      # 필수 체크가 아니라서 실패해도 머지는 막지 않는다.
+      - name: OPN-숫자 찾기
+        env:
+          BRANCH: ${{ github.head_ref }}
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if printf '%s\n%s\n%s\n' "$BRANCH" "$TITLE" "$BODY" | grep -qiE '\bopn-[0-9]+'; then
+            echo "Linear 이슈에 연결돼 있어요."
+          else
+            echo "::warning::브랜치명, PR 제목, PR 본문 어디에도 OPN-숫자가 없어서 Linear 이슈에 연결되지 않아요. 예: 브랜치 feature/opn-10 또는 본문에 Closes OPN-10"
+            exit 1
+          fi
