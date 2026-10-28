@@ -14,7 +14,6 @@
       "passThroughEnv": ["PORT"]
     },
     "start": {
-      "dependsOn": ["build"],
       "cache": false,
       "persistent": true,
       "passThroughEnv": ["PORT"]
