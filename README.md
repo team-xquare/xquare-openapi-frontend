@@ -14,6 +14,7 @@ npm install
 npm run dev                          # 모든 앱
 npx turbo run dev --filter=admin     # 앱 하나만
 npm run build
+npm run start                        # 빌드 후 모든 앱 실행
 npm run lint
 ```
 
