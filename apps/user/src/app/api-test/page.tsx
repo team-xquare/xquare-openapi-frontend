@@ -56,6 +56,38 @@ function parseUrl(url: string) {
   }
 }
 
+// URL 객체로 다시 만들면 한글·공백이 인코딩되고 주소 끝에 /가 붙으므로,
+// 사용자가 쓴 나머지 부분은 그대로 두고 해당 키만 바꿈
+function setQueryParam(url: string, key: string, value: string) {
+  const hashIndex = url.indexOf("#");
+  const hash = hashIndex === -1 ? "" : url.slice(hashIndex);
+  const beforeHash = hashIndex === -1 ? url : url.slice(0, hashIndex);
+  const queryIndex = beforeHash.indexOf("?");
+  const base =
+    queryIndex === -1 ? beforeHash : beforeHash.slice(0, queryIndex);
+  const pairs =
+    queryIndex === -1
+      ? []
+      : beforeHash
+          .slice(queryIndex + 1)
+          .split("&")
+          .filter(Boolean);
+
+  // 같은 키가 여러 번 있으면 첫 번째 자리만 바꾸고 나머지는 지움
+  const nextPair = `${key}=${encodeURIComponent(value)}`;
+  let isReplaced = false;
+  const nextPairs = pairs.flatMap((pair) => {
+    if (pair.split("=")[0] !== key) return [pair];
+    if (!value || isReplaced) return [];
+    isReplaced = true;
+    return [nextPair];
+  });
+  if (value && !isReplaced) nextPairs.push(nextPair);
+
+  const query = nextPairs.join("&");
+  return `${base}${query ? `?${query}` : ""}${hash}`;
+}
+
 // 셸에 붙여넣어도 값이 그대로 전달되도록 작은따옴표로 감쌈
 function quoteShell(value: string) {
   return `'${value.replace(/'/g, "'\\''")}'`;
@@ -141,11 +173,7 @@ export default function ApiTestPage() {
   // 쿼리 파라미터 입력값은 URL에 바로 반영해 요청 바와 항상 같게 유지
   const handleParamChange = (key: string, value: string) => {
     if (!parsedUrl) return;
-
-    const nextUrl = new URL(parsedUrl);
-    if (value) nextUrl.searchParams.set(key, value);
-    else nextUrl.searchParams.delete(key);
-    setUrl(nextUrl.toString());
+    setUrl(setQueryParam(url, key, value));
   };
 
   const responseLines =
