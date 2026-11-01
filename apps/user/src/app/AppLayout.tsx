@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "../components/sidebar";
 
 // 사이드바 없이 화면 전체를 쓰는 페이지
-const FULL_SCREEN_PATHS = ["/login", "/signup"];
+const FULL_SCREEN_PATHS = ["/login", "/signup", "/forgot-password"];
 
 function AppLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
