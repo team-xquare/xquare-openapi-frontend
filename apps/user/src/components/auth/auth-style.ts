@@ -135,17 +135,13 @@ export const AuthLinkButton = styled.button`
   padding: 0;
 `;
 
-// 비밀번호 찾기 페이지가 아직 없어 비활성 버튼으로 자리만 둠
-export const PasswordHelpButton = styled.button`
-  appearance: none;
-  background: transparent;
-  border: 0;
+// 비밀번호 입력칸 오른쪽 아래의 비밀번호 찾기 링크
+export const PasswordHelpLink = styled(Link)`
   color: ${Xquare_colors.gray[500]};
-  cursor: not-allowed;
+  display: block;
   font-family: ${AUTH_FONT_FAMILY};
   font-size: 0.8rem;
   font-weight: 500;
-  padding: 0;
   text-align: right;
   width: 300px;
 `;
