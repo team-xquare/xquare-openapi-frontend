@@ -4,6 +4,10 @@ import { Xquare_colors, Xquare_fonts } from "../../index";
 const BORDER = `1px solid ${Xquare_colors.slate[400]}`;
 const ACCENT_COLOR = Xquare_colors.blue[400];
 const PLACEHOLDER_COLOR = "#8C9199";
+const DISABLED_FIELD = `
+  background: ${Xquare_colors.slate[50]};
+  cursor: not-allowed;
+`;
 // 사이드바(280px)를 뺀 본문이 좁아 요청 바에 기본 URL이 다 안 보이는 폭
 const REQUEST_BAR_NARROW = "@media (max-width: 900px)";
 
@@ -209,6 +213,36 @@ export const TextInput = styled.input`
   &:focus {
     border-color: ${ACCENT_COLOR};
     outline: none;
+  }
+
+  &:disabled {
+    ${DISABLED_FIELD}
+  }
+`;
+
+export const BodyInput = styled.textarea`
+  border: ${BORDER};
+  border-radius: 6px;
+  color: ${Xquare_colors.slate[900]};
+  font-family: ${Xquare_fonts.mono};
+  font-size: 15px;
+  line-height: normal;
+  min-height: 160px;
+  padding: 12px 14px;
+  resize: vertical;
+  width: 100%;
+
+  &::placeholder {
+    color: ${PLACEHOLDER_COLOR};
+  }
+
+  &:focus {
+    border-color: ${ACCENT_COLOR};
+    outline: none;
+  }
+
+  &:disabled {
+    ${DISABLED_FIELD}
   }
 `;
 

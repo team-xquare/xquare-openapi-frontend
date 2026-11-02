@@ -3,9 +3,15 @@ export type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
 export const HTTP_METHODS: HttpMethod[] = ["GET", "POST", "PATCH", "DELETE"];
 
 export const DEFAULT_REQUEST: { method: HttpMethod; url: string } = {
-  method: "POST",
-  url: "https://open.xquare.app/auth/login",
+  method: "GET",
+  url: "https://open.xquare.app/students",
 };
+
+// 기본 예시(GET /students)에서 입력받는 쿼리 파라미터
+export const QUERY_FIELDS = [
+  { key: "grade", placeholder: "학년 (예: 2)" },
+  { key: "classNum", placeholder: "반 (예: 3)" },
+];
 
 // 실제 호출 연동 전까지 보여줄 예시 응답
 export const SAMPLE_RESPONSE = {
@@ -14,9 +20,13 @@ export const SAMPLE_RESPONSE = {
   size: "412 B",
   body: [
     "{",
-    '  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6...",',
-    '  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6...",',
-    '  "expiresIn": 3600',
+    '  "content": [',
+    '    { "id": 1, "studentNumber": 2315, "name": "장윤호", ... }',
+    "  ],",
+    '  "page": 0,',
+    '  "size": 20,',
+    '  "totalCount": 31,',
+    '  "totalPage": 2',
     "}",
   ],
   headers: [
@@ -38,15 +48,15 @@ export interface CallHistoryItem {
 export const CALL_HISTORY: CallHistoryItem[] = [
   {
     id: "3",
-    method: "POST",
-    path: "/auth/login",
+    method: "GET",
+    path: "/students?grade=2&classNum=3",
     status: 200,
     calledAt: "14:32:10",
   },
   {
     id: "2",
     method: "GET",
-    path: "/students?grade=SECOND",
+    path: "/students?grade=2",
     status: 200,
     calledAt: "14:29:55",
   },
