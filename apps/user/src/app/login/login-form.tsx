@@ -12,7 +12,7 @@ import {
   AuthLink,
   AuthLinkRow,
   AuthTitle,
-  PasswordHelpButton,
+  PasswordHelpLink,
 } from "../../components/auth";
 
 // XQUARE 인프라 서비스 로그인 화면과 같은 구성
@@ -59,13 +59,9 @@ export function LoginForm() {
             type="password"
             autoComplete="current-password"
           />
-          <PasswordHelpButton
-            type="button"
-            disabled
-            title="비밀번호 찾기 페이지 준비 중"
-          >
+          <PasswordHelpLink href="/forgot-password">
             비밀번호 찾기
-          </PasswordHelpButton>
+          </PasswordHelpLink>
         </AuthInputs>
 
         <AuthFormActions>

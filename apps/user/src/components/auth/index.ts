@@ -7,5 +7,5 @@ export {
   AuthLinkButton,
   AuthLinkRow,
   AuthTitle,
-  PasswordHelpButton,
+  PasswordHelpLink,
 } from "./auth-style";
