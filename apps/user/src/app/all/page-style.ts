@@ -14,13 +14,6 @@ export const EndpointPage = styled.main`
 `;
 
 export const ListHeader = styled.header`
-  align-items: flex-start;
-  display: flex;
-  justify-content: space-between;
-  gap: 24px;
-`;
-
-export const WelcomeCopy = styled.div`
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -43,25 +36,6 @@ export const WelcomeLead = styled.p`
   font-size: 15px;
   line-height: 1.5;
   margin: 0;
-`;
-
-export const LogoutButton = styled.button`
-  background: #fff;
-  border: 1px solid #d2d2d2;
-  border-radius: 999px;
-  color: #b8b8b8;
-  cursor: pointer;
-  flex: 0 0 auto;
-  font-size: 14px;
-  height: 38px;
-  padding: 0 26px;
-
-  &:hover,
-  &:focus-visible {
-    border-color: #9650fa;
-    color: #7331d2;
-    outline: none;
-  }
 `;
 
 export const PageDivider = styled.hr`

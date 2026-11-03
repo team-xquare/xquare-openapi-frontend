@@ -11,9 +11,7 @@ import {
   EndpointMethod,
   EndpointPage,
   ListHeader,
-  LogoutButton,
   PageDivider,
-  WelcomeCopy,
   WelcomeHeading,
   WelcomeLead,
 } from "./all/page-style";
@@ -21,11 +19,8 @@ import {
 export function PageWelcome() {
   return (
     <ListHeader>
-      <WelcomeCopy>
-        <WelcomeHeading>Welcome, Back</WelcomeHeading>
-        <WelcomeLead>Access school information via xquare</WelcomeLead>
-      </WelcomeCopy>
-      <LogoutButton type="button">로그아웃</LogoutButton>
+      <WelcomeHeading>Welcome, Back</WelcomeHeading>
+      <WelcomeLead>Access school information via xquare</WelcomeLead>
     </ListHeader>
   );
 }
