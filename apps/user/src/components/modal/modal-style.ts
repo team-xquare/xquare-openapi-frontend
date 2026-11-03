@@ -29,12 +29,13 @@ export const ModalTitle = styled.h2`
   margin: 0 0 12px;
 `;
 
-export const ModalDescription = styled.p`
+export const ModalDescription = styled.p<{ align: "left" | "center" }>`
   color: ${Xquare_colors.gray[600]};
   font-size: 14px;
   font-weight: 400;
   line-height: 1.3;
   margin: 0;
+  text-align: ${(props) => props.align};
   word-break: keep-all;
 `;
 

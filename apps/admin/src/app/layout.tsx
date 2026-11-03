@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import localFont from "next/font/local";
 import "./globals.css";
 import EmotionRegistry from "./EmotionRegistry";
+import AppLayout from "./AppLayout";
 
 const pretendard = localFont({
   src: [
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ko" className={pretendard.variable}>
       <body suppressHydrationWarning>
-        <EmotionRegistry>{children}</EmotionRegistry>
+        <EmotionRegistry>
+          <AppLayout>{children}</AppLayout>
+        </EmotionRegistry>
       </body>
     </html>
   );

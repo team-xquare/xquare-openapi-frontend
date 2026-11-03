@@ -15,6 +15,7 @@ interface ModalProps {
   description: ReactNode;
   confirmLabel: string;
   cancelLabel?: string;
+  descriptionAlign?: "left" | "center";
   onClose: () => void;
   onConfirm?: () => void;
 }
@@ -24,6 +25,7 @@ export function Modal({
   description,
   confirmLabel,
   cancelLabel = "취소",
+  descriptionAlign = "center",
   onClose,
   onConfirm,
 }: ModalProps) {
@@ -46,7 +48,7 @@ export function Modal({
       aria-describedby={`${id}-description`}
     >
       <ModalTitle id={`${id}-title`}>{title}</ModalTitle>
-      <ModalDescription id={`${id}-description`}>
+      <ModalDescription id={`${id}-description`} align={descriptionAlign}>
         {description}
       </ModalDescription>
       <ModalActions method="dialog">
