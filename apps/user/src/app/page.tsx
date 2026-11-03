@@ -12,13 +12,13 @@ import {
 } from "../components";
 import {
   ACCESS_LEVELS,
+  AUTH_ERROR_RESPONSE_LINES,
   AUTH_INFO,
   ENDPOINT_COLUMNS,
   ENDPOINT_ROWS,
   ERROR_CODE_COLUMNS,
   ERROR_CODE_ROWS,
   GETTING_STARTED_STEPS,
-  LOGIN_RESPONSE_LINES,
   META_INFO,
   OVERVIEW_BADGES,
   OVERVIEW_LEAD,
@@ -52,7 +52,7 @@ export default function Home() {
       <DocSection
         id="quick-start"
         title="빠른 시작"
-        description="로그인으로 액세스 토큰을 발급받은 뒤, Authorization 헤더에 실어 호출합니다."
+        description="활용 신청으로 API 키를 발급받은 뒤, X-API-KEY 헤더에 실어 호출합니다."
       >
         {QUICK_START_CODES.map((code) => (
           <CodeBlock
@@ -67,10 +67,13 @@ export default function Home() {
       <DocSection
         id="auth"
         title="인증"
-        description="모든 엔드포인트는 로그인으로 발급받은 JWT 액세스 토큰을 요구합니다."
+        description="모든 엔드포인트는 활용 신청으로 발급받은 API 키를 요구합니다."
       >
         <InfoList items={AUTH_INFO} />
-        <CodeBlock label="로그인 응답" lines={LOGIN_RESPONSE_LINES} />
+        <CodeBlock
+          label="인증 실패 응답 (401)"
+          lines={AUTH_ERROR_RESPONSE_LINES}
+        />
       </DocSection>
 
       <DocSection
@@ -106,7 +109,7 @@ export default function Home() {
       <DocSection
         id="access"
         title="접근 권한"
-        description="엔드포인트마다 호출 가능한 대상이 정해져 있습니다. 명세서의 타겟 값을 따릅니다."
+        description="API 키로는 활용 신청해 승인된 API만 호출할 수 있습니다. 계정 유형에 따라 호출 한도가 다릅니다."
       >
         <InfoList items={ACCESS_LEVELS} />
       </DocSection>

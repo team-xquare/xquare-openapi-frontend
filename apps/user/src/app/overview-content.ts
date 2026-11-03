@@ -11,56 +11,42 @@ export const OVERVIEW_BADGES = ["REST", "JSON"];
 export const OVERVIEW_TITLE = "XQUARE DSM Open API";
 
 export const OVERVIEW_LEAD =
-  "대덕소프트웨어마이스터고등학교의 급식, 일정, 동아리, 교직원, 학생, 공지 정보를 다루는 REST API입니다. JWT 인증을 사용하며 조회뿐 아니라 등록, 수정, 삭제를 지원합니다.";
+  "대덕소프트웨어마이스터고등학교의 급식, 일정, 동아리, 교직원, 학생, 공지 정보를 다루는 REST API입니다. 활용 신청으로 발급받은 API 키로 인증하며 조회뿐 아니라 등록, 수정, 삭제를 지원합니다.";
 
 export const QUICK_START_CODES = [
   {
-    label: "1. 토큰 발급",
+    label: "발급받은 API 키로 호출",
     lines: [
-      "curl -X POST {BASE_URL}/auth/login \\",
-      '  -H "Content-Type: application/json" \\',
-      `  -d '{"email": "user@example.com", "password": "Password1!"}'`,
-    ],
-  },
-  {
-    label: "2. 발급받은 토큰으로 호출",
-    lines: [
-      'curl "{BASE_URL}/students?grade=SECOND&class=THREE" \\',
-      '  -H "Authorization: Bearer {accessToken}"',
+      'curl "{BASE_URL}/students?grade=2&classNum=3" \\',
+      '  -H "X-API-KEY: {apiKey}"',
     ],
   },
 ];
 
 export const AUTH_INFO: InfoListItem[] = [
   { label: "Base URL", value: "[확정 필요]" },
-  { label: "인증 방식", value: "JWT Bearer 토큰" },
-  { label: "토큰 발급", value: "POST /auth/login", isCode: true },
+  { label: "인증 방식", value: "API 키" },
   {
-    label: "요청 헤더",
-    value: "Authorization: Bearer {accessToken}",
-    isCode: true,
+    label: "키 발급",
+    value:
+      "API 활용 신청 시 발급됩니다. 개발계정은 자동승인되어 바로 발급됩니다.",
   },
-  { label: "토큰 유효기간", value: "3600초 (expiresIn)" },
+  { label: "요청 헤더", value: "X-API-KEY: {apiKey}", isCode: true },
   {
-    label: "계정 인증",
-    value: "이메일 OTP 인증을 마친 계정만 로그인할 수 있습니다.",
+    label: "키 보관",
+    value: "발급 직후에만 키 전체가 표시됩니다. 분실하면 재발급해야 합니다.",
   },
   {
-    label: "계정 잠금",
-    value: "로그인 5회 실패 시 계정이 잠깁니다. (ACCOUNT_LOCKED)",
+    label: "호출 한도",
+    value:
+      "개발계정은 하루 10,000회까지 호출할 수 있습니다. (RATE_LIMIT_EXCEEDED)",
   },
 ];
 
-export const LOGIN_RESPONSE_LINES = [
+export const AUTH_ERROR_RESPONSE_LINES = [
   "{",
-  '  "success": true,',
-  '  "data": {',
-  '    "accessToken": "eyJhbGci...",',
-  '    "tokenType": "Bearer",',
-  '    "expiresIn": 3600,',
-  '    "user": { "userId": "user_123", "email": "user@example.com", "status": "ACTIVE" }',
-  "  },",
-  '  "error": null',
+  '  "code": "INVALID_API_KEY",',
+  '  "message": "API 키가 유효하지 않습니다."',
   "}",
 ];
 
@@ -113,52 +99,55 @@ export const ERROR_CODE_COLUMNS: DocTableColumn[] = [
 
 export const ERROR_CODE_ROWS = [
   {
-    code: "INVALID_CREDENTIALS",
+    code: "INVALID_API_KEY",
     status: "401",
-    description:
-      "토큰이 없거나 유효하지 않습니다. 로그인 시에는 이메일 또는 비밀번호 불일치입니다.",
+    description: "API 키가 없거나 유효하지 않습니다.",
   },
   {
-    code: "EMAIL_NOT_VERIFIED",
+    code: "API_ACCESS_DENIED",
     status: "403",
-    description: "이메일 미인증 계정입니다.",
+    description: "활용 신청하지 않은 API를 호출했습니다.",
   },
   {
-    code: "ACCOUNT_LOCKED",
-    status: "423",
-    description: "로그인 5회 실패로 계정이 잠겼습니다.",
+    code: "RATE_LIMIT_EXCEEDED",
+    status: "429",
+    description:
+      "하루 호출 한도를 넘었습니다. 다음 날 다시 호출할 수 있습니다.",
   },
 ];
 
 export const ACCESS_LEVELS: InfoListItem[] = [
   {
-    label: "USER",
+    label: "개발계정",
     value:
-      "로그인한 일반 사용자가 호출할 수 있습니다. 학생 조회 계열이 여기에 속합니다.",
+      "활용 신청 즉시 자동승인됩니다. 하루 10,000회까지 호출할 수 있습니다.",
   },
   {
-    label: "ADMIN",
-    value:
-      "관리자만 호출할 수 있습니다. 등록, 수정, 삭제 계열이 여기에 속합니다.",
+    label: "운영계정",
+    value: "활용사례를 등록하고 신청하면 호출 한도를 늘릴 수 있습니다.",
   },
-  { label: "ALL", value: "대상 제한 없이 호출할 수 있습니다." },
+  {
+    label: "미신청 API",
+    value:
+      "활용 신청하지 않은 API를 호출하면 403(API_ACCESS_DENIED)을 반환합니다.",
+  },
 ];
 
 export const GETTING_STARTED_STEPS: StepCard[] = [
   {
-    title: "계정 이메일 인증",
+    title: "회원가입 후 로그인",
     description:
-      "이메일로 발송된 OTP를 입력해 계정을 인증합니다. 미인증 상태에서는 로그인이 거부됩니다.",
+      "학교 이메일(@dsm.hs.kr)로 가입하고 로그인합니다. 활용 신청은 로그인 후 이용할 수 있습니다.",
   },
   {
-    title: "로그인해 토큰 발급",
+    title: "API 활용 신청",
     description:
-      "POST /auth/login에 이메일과 비밀번호를 보내면 accessToken을 받습니다. 5회 실패하면 계정이 잠깁니다.",
+      "사용할 API를 활용 신청하면 개발계정은 자동승인되어 API 키가 바로 발급됩니다. 키는 이때만 전체가 표시되니 복사해 보관합니다.",
   },
   {
-    title: "헤더에 토큰 실어 호출",
+    title: "헤더에 API 키 실어 호출",
     description:
-      "Authorization: Bearer {accessToken} 헤더를 붙여 호출합니다. 토큰은 1시간 뒤 만료됩니다.",
+      "X-API-KEY: {apiKey} 헤더를 붙여 호출합니다. 개발계정은 하루 10,000회까지 호출할 수 있습니다.",
   },
 ];
 
