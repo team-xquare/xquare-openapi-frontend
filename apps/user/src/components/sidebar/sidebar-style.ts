@@ -14,6 +14,7 @@ export const SidebarContainer = styled.div`
   inset: 0 auto 0 0;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   width: ${SIDEBAR_WIDTH};
   transition: width ${ANIMATION_DURATION} ease;
   cursor: default;
@@ -25,14 +26,15 @@ export const SidebarContent = styled.div`
   flex-direction: column;
   flex: 1;
   gap: ${CONTENT_GAP};
-  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
 `;
 
 export const SidebarOverview = styled.button`
   appearance: none;
   background: transparent;
   border: 0;
-  color: ${Xquare_colors.purple[400]};
+  color: ${Xquare_colors.white};
   cursor: pointer;
   font-family: inherit;
   font-size: 16px;
@@ -56,7 +58,7 @@ export const SidebarUtilityLink = styled.button`
   appearance: none;
   background: transparent;
   border: 0;
-  color: ${Xquare_colors.purple[400]};
+  color: ${Xquare_colors.white};
   cursor: pointer;
   font-family: inherit;
   font-size: 16px;

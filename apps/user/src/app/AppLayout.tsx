@@ -24,6 +24,7 @@ function AppLayout({ children }: { children: ReactNode }) {
       { id: "supervisor", label: "자습감독", path: "/supervisor" },
       { id: "student", label: "학생", path: "/student" },
       { id: "notice", label: "공지", path: "/notice" },
+      { id: "api-test", label: "API 테스트", path: "/api-test" },
     ],
     [],
   );
@@ -39,6 +40,7 @@ function AppLayout({ children }: { children: ReactNode }) {
       supervisor: "/supervisor",
       student: "/student",
       notice: "/notice",
+      "api-test": "/api-test",
     };
 
     const path = routeMap[itemId];

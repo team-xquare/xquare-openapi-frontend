@@ -54,12 +54,12 @@ function Sidebar({ navItems, onNavItemClick }: SidebarProps) {
             isMatch(i.path?.split("#")[0]) ||
             i.subItems?.some((s) => isMatch(s.path)),
         )?.id ??
-        navItems[0]?.id ??
         "");
   const overviewItem = navItems.find((item) => item.id === "overview");
   const noticeItem = navItems.find((item) => item.id === "notice");
+  const apiTestItem = navItems.find((item) => item.id === "api-test");
   const endpointItems = navItems.filter(
-    (item) => item.id !== "overview" && item.id !== "notice",
+    (item) => !["overview", "notice", "api-test"].includes(item.id),
   );
 
   const isMainItemActive = useCallback(
@@ -99,6 +99,15 @@ function Sidebar({ navItems, onNavItemClick }: SidebarProps) {
             aria-current={activeItemId === noticeItem.id ? "page" : undefined}
           >
             {noticeItem.label}
+          </SidebarUtilityLink>
+        )}
+        {apiTestItem && (
+          <SidebarUtilityLink
+            type="button"
+            onClick={() => handleMainItemClick(apiTestItem.id)}
+            aria-current={activeItemId === apiTestItem.id ? "page" : undefined}
+          >
+            {apiTestItem.label}
           </SidebarUtilityLink>
         )}
         <SidebarSectionTitle>ENDPOINT</SidebarSectionTitle>
