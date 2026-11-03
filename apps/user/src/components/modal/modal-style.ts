@@ -75,6 +75,11 @@ export const ContactDialog = styled(ModalDialog)`
   text-align: left;
   width: 560px;
 
+  /* Figma 문의하기 모달 배경 (검정 45%) */
+  &::backdrop {
+    background: ${Xquare_colors.black}73;
+  }
+
   @media (max-width: 520px) {
     padding: 28px 24px;
   }
@@ -142,4 +147,20 @@ export const ContactInfo = styled.dl`
 export const ContactActions = styled(ModalActions)`
   justify-content: flex-start;
   margin-top: 24px;
+`;
+
+// Figma 문의하기 모달 버튼 크기 (16px 굵게, 여백 14px 28px)
+const CONTACT_BUTTON = `
+  font-size: 16px;
+  font-weight: 700;
+  line-height: normal;
+  padding: 14px 28px;
+`;
+
+export const ContactPrimaryButton = styled(PrimaryButton)`
+  ${CONTACT_BUTTON}
+`;
+
+export const ContactSecondaryButton = styled(SecondaryButton)`
+  ${CONTACT_BUTTON}
 `;

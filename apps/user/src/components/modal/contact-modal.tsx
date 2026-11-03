@@ -6,11 +6,11 @@ import {
   ContactDescription,
   ContactDialog,
   ContactInfo,
+  ContactPrimaryButton,
+  ContactSecondaryButton,
   ContactTitle,
   ErrorInfoList,
   ErrorInfoRow,
-  PrimaryButton,
-  SecondaryButton,
 } from "./modal-style";
 
 // 문의처가 아직 정해지지 않아 Figma 문구를 그대로 둠
@@ -97,10 +97,14 @@ export function ContactModal({ report, onClose }: ContactModalProps) {
         <dd>{CONTACT_CHANNEL}</dd>
       </ContactInfo>
       <ContactActions method="dialog">
-        <PrimaryButton type="button" aria-live="polite" onClick={handleCopy}>
+        <ContactPrimaryButton
+          type="button"
+          aria-live="polite"
+          onClick={handleCopy}
+        >
           {COPY_LABELS[copyState]}
-        </PrimaryButton>
-        <SecondaryButton type="submit">닫기</SecondaryButton>
+        </ContactPrimaryButton>
+        <ContactSecondaryButton type="submit">닫기</ContactSecondaryButton>
       </ContactActions>
     </ContactDialog>
   );
