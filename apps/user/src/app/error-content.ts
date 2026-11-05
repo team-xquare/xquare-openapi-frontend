@@ -4,8 +4,8 @@ export type ErrorStatus = 401 | 403 | 404 | 429 | 500;
 
 export type ErrorAction =
   | { label: string; href: string }
-  // back: 이전 페이지로, retry: 실패한 요청 다시 시도
-  | { label: string; kind: "back" | "retry" };
+  // back: 이전 페이지로, retry: 실패한 요청 다시 시도, contact: 문의하기 모달 열기
+  | { label: string; kind: "back" | "retry" | "contact" };
 
 export interface ErrorPageContent {
   title: string;
@@ -52,12 +52,12 @@ export const ERROR_PAGES: Record<ErrorStatus, ErrorPageContent> = {
     ],
   },
   500: {
-    title: "일시적인 오류가 발생했습니다",
+    title: "서버에 문제가 발생했습니다",
     description:
-      "서버에서 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      "일시적인 오류입니다. 잠시 후 다시 시도해 주세요. 문제가 계속되면 담당자에게 문의해 주세요.",
     actions: [
       { label: "다시 시도", kind: "retry" },
-      { label: "홈으로", href: "/" },
+      { label: "문의하기", kind: "contact" },
     ],
   },
 };
