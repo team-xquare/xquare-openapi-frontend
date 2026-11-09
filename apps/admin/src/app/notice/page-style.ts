@@ -140,7 +140,9 @@ export const NoticeTable = styled.table`
     color: ${Xquare_colors.slate[600]};
     font-size: 13px;
     font-weight: 700;
-    height: 48px;
+    /* 겹친 테두리 표에서는 높이에 아래 구분선 1px이 들어가므로,
+       Figma의 머리줄 48px + 구분선 1px에 맞춰 49px */
+    height: 49px;
     padding: 0 16px;
     text-align: left;
   }
@@ -162,7 +164,8 @@ export const NoticeTable = styled.table`
     border-bottom: ${BORDER_DEFAULT};
     color: ${Xquare_colors.slate[900]};
     font-size: 14px;
-    height: 56px;
+    /* 행 56px + 구분선 1px */
+    height: 57px;
     overflow: hidden;
     padding: 0 16px;
     text-overflow: ellipsis;
@@ -318,11 +321,12 @@ export const FormNote = styled.div`
 `;
 
 // 수정 화면은 삭제가 왼쪽, 취소·저장이 오른쪽. 등록 화면은 취소·저장만 왼쪽
+// Figma에서 버튼은 입력 카드 아래 30px에 있음
 export const FormActions = styled.div`
   align-items: center;
   display: flex;
   justify-content: space-between;
-  padding-top: 20px;
+  padding-top: 30px;
 `;
 
 export const ActionGroup = styled.div`

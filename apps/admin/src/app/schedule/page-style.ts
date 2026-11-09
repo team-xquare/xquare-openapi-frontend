@@ -159,7 +159,8 @@ const TABLE = `
     color: ${Xquare_colors.slate[600]};
     font-size: 13px;
     font-weight: 700;
-    height: 48px;
+    /* 공지 표와 같이 높이에 아래 구분선 1px을 포함 (머리줄 48px, 행 56px) */
+    height: 49px;
     padding: 0 16px;
     text-align: left;
   }
@@ -168,7 +169,7 @@ const TABLE = `
     border-bottom: ${BORDER_DEFAULT};
     color: ${Xquare_colors.slate[900]};
     font-size: 14px;
-    height: 56px;
+    height: 57px;
     overflow: hidden;
     padding: 0 16px;
     text-overflow: ellipsis;
