@@ -63,7 +63,7 @@ export const HOME_ISSUES: HomeIssue[] = [
     title: "2026-09-16 자습 감독 미배정",
     description: "2층 · 3층 · 4층 모두 비어 있습니다.",
     actionLabel: "배정",
-    href: "/supervisor/new",
+    href: "/supervisor/2026-09-16/edit",
   },
   {
     title: "동아리 DAUS 담당 선생님 미지정",
