@@ -5,17 +5,27 @@ import { Xquare_colors } from "../../styles/colors";
 // user 앱의 기존 사이드바 너비, 색상과 헤더·메뉴·푸터 스타일을 재사용합니다.
 export const SIDEBAR_WIDTH = "280px";
 
+// 사이드바 열은 페이지 높이만큼 늘어나서, 긴 화면을 전체 캡처해도 끝까지 이어짐
+// 가로로 스크롤해도 왼쪽에 남고, 본문이 아래로 지나가도록 위에 그림
 export const SidebarContainer = styled.aside`
   background-color: ${Xquare_colors.purple[700]};
   color: ${Xquare_colors.white};
+  cursor: default;
+  flex: 0 0 ${SIDEBAR_WIDTH};
+  left: 0;
+  position: sticky;
+  width: ${SIDEBAR_WIDTH};
+  z-index: 1;
+`;
+
+// 메뉴는 세로로 스크롤해도 화면에 붙어 있음
+export const SidebarInner = styled.div`
   display: flex;
-  position: fixed;
-  inset: 0 auto 0 0;
   flex-direction: column;
   height: 100vh;
   height: 100dvh;
-  width: ${SIDEBAR_WIDTH};
-  cursor: default;
+  position: sticky;
+  top: 0;
 `;
 
 export const SidebarHeader = styled.header`
