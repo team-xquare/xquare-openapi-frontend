@@ -4,11 +4,9 @@ import { useId, useLayoutEffect, useRef, useState, type FormEvent } from "react"
 import {
   SCHEDULE_BASE_MONTH,
   SCHEDULE_BASE_YEAR,
-  SCHEDULE_SOURCE_LABEL,
   SCHEDULES,
   SUPERVISIONS,
   type Schedule,
-  type ScheduleSource,
 } from "../schedule-content";
 import {
   EmptyCell,
@@ -37,13 +35,11 @@ import {
   ScheduleTable,
   Select,
   SelectBox,
-  SmallButton,
   SmallLink,
-  SourceBadge,
   SupervisionTable,
-  TimetableNotice,
   Unassigned,
 } from "./page-style";
+import { TimetableCard } from "./timetable-card";
 
 const YEARS = [
   SCHEDULE_BASE_YEAR - 1,
@@ -51,19 +47,15 @@ const YEARS = [
   SCHEDULE_BASE_YEAR + 1,
 ];
 const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1);
-const SOURCES = Object.keys(SCHEDULE_SOURCE_LABEL) as ScheduleSource[];
 
 interface Filter {
   year: number;
   month: number;
-  // 빈 값은 출처 전체
-  source: ScheduleSource | "";
 }
 
 const INITIAL_FILTER: Filter = {
   year: SCHEDULE_BASE_YEAR,
   month: SCHEDULE_BASE_MONTH,
-  source: "",
 };
 
 const toMonthPrefix = ({ year, month }: Filter) =>
@@ -87,11 +79,7 @@ export default function ScheduleListPage() {
 
   const monthPrefix = toMonthPrefix(filter);
   const scheduleRows = schedules
-    .filter(
-      (schedule) =>
-        schedule.date.startsWith(monthPrefix) &&
-        (filter.source === "" || schedule.source === filter.source),
-    )
+    .filter((schedule) => schedule.date.startsWith(monthPrefix))
     .sort((a, b) => a.date.localeCompare(b.date));
   const supervisionRows = SUPERVISIONS.filter((supervision) =>
     supervision.date.startsWith(monthPrefix),
@@ -150,43 +138,18 @@ export default function ScheduleListPage() {
             ))}
           </Select>
         </SelectBox>
-        <SelectBox width={180}>
-          <Select
-            aria-label="출처"
-            value={draft.source}
-            data-placeholder={draft.source === "" || undefined}
-            onChange={(event) =>
-              setDraft({
-                ...draft,
-                source: event.target.value as Filter["source"],
-              })
-            }
-          >
-            <option value="">출처 전체</option>
-            {SOURCES.map((source) => (
-              <option key={source} value={source}>
-                {SCHEDULE_SOURCE_LABEL[source]}
-              </option>
-            ))}
-          </Select>
-        </SelectBox>
         <SecondaryButton type="submit">조회</SecondaryButton>
       </FilterBar>
 
-      <FilterHint>
-        나이스에서 불러온 일정과 학교에서 직접 입력한 일정 모두 수정·삭제할 수
-        있습니다.
-      </FilterHint>
+      <FilterHint>등록한 일정은 이 화면에서 수정·삭제할 수 있습니다.</FilterHint>
 
       <CardList>
         <Card aria-labelledby={`${id}-schedule`}>
           <CardHead>
             <CardHeading>
               <CardTitle id={`${id}-schedule`}>학사 일정</CardTitle>
-              <CardMeta>나이스 동기화 + 학교 입력</CardMeta>
+              <CardMeta>학교 입력</CardMeta>
             </CardHeading>
-            {/* 나이스 일정 불러오기 API 연동 전이라 아직 동작하지 않음 */}
-            <SmallButton type="button">나이스에서 불러오기</SmallButton>
           </CardHead>
 
           <ScheduleTable aria-labelledby={`${id}-schedule`}>
@@ -195,7 +158,6 @@ export default function ScheduleListPage() {
                 <th scope="col">날짜</th>
                 <th scope="col">제목</th>
                 <th scope="col">설명</th>
-                <th scope="col">출처</th>
                 <th scope="col">
                   <VisuallyHidden>관리</VisuallyHidden>
                 </th>
@@ -207,11 +169,6 @@ export default function ScheduleListPage() {
                   <td>{schedule.date}</td>
                   <td title={schedule.title}>{schedule.title}</td>
                   <td title={schedule.description}>{schedule.description}</td>
-                  <td>
-                    <SourceBadge source={schedule.source}>
-                      {SCHEDULE_SOURCE_LABEL[schedule.source]}
-                    </SourceBadge>
-                  </td>
                   <td>
                     <RowActions>
                       <RowEditLink
@@ -233,7 +190,7 @@ export default function ScheduleListPage() {
               ))}
               {scheduleRows.length === 0 && (
                 <tr>
-                  <EmptyCell colSpan={5}>
+                  <EmptyCell colSpan={4}>
                     {filter.month}월에 등록된 학사 일정이 없습니다.
                   </EmptyCell>
                 </tr>
@@ -284,21 +241,7 @@ export default function ScheduleListPage() {
           </SupervisionTable>
         </Card>
 
-        <Card aria-labelledby={`${id}-timetable`}>
-          <CardHead>
-            <CardHeading>
-              <CardTitle id={`${id}-timetable`}>시간표</CardTitle>
-              <CardMeta>컴시간 알리미</CardMeta>
-            </CardHeading>
-          </CardHead>
-          <TimetableNotice>
-            <p>시간표 API가 아직 정의되지 않아 표시할 수 없습니다.</p>
-            <p>
-              학급별 시간표를 이 화면에서 보려면 컴시간 알리미 연동 엔드포인트가
-              먼저 명세에 추가돼야 합니다.
-            </p>
-          </TimetableNotice>
-        </Card>
+        <TimetableCard />
       </CardList>
 
       {deleteTarget && (

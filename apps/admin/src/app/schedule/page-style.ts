@@ -57,11 +57,6 @@ export const Select = styled.select`
   padding: 0 40px 0 16px;
   width: 100%;
 
-  /* "출처 전체"처럼 거르지 않는 값은 흐리게 */
-  &[data-placeholder] {
-    color: ${Xquare_colors.slate[400]};
-  }
-
   &:focus {
     border-color: ${Xquare_colors.purple[400]};
     outline: none;
@@ -70,6 +65,19 @@ export const Select = styled.select`
   option {
     color: ${Xquare_colors.slate[900]};
   }
+`;
+
+// 시간표 카드 머리말의 작은 선택 상자 (높이 36px)
+export const SmallSelectBox = styled(SelectBox)`
+  &::after {
+    right: 13px;
+  }
+`;
+
+export const SmallSelect = styled(Select)`
+  font-size: 14px;
+  height: 36px;
+  padding: 0 32px 0 12px;
 `;
 
 export const FilterHint = styled.p`
@@ -140,10 +148,6 @@ const SMALL_BUTTON = `
   ${FOCUS_RING}
 `;
 
-export const SmallButton = styled.button`
-  ${SMALL_BUTTON}
-`;
-
 export const SmallLink = styled(Link)`
   ${SMALL_BUTTON}
 `;
@@ -177,12 +181,11 @@ const TABLE = `
   }
 `;
 
-// 날짜 · 제목 · 설명 · 출처 · 관리
+// 날짜 · 제목 · 설명 · 관리. 설명 칸이 남는 폭을 채움
 export const ScheduleTable = styled.table`
   ${TABLE}
 
-  th:nth-of-type(1),
-  th:nth-of-type(4) {
+  th:nth-of-type(1) {
     width: 160px;
   }
 
@@ -190,7 +193,7 @@ export const ScheduleTable = styled.table`
     width: 360px;
   }
 
-  th:nth-of-type(5) {
+  th:nth-of-type(4) {
     width: 124px;
   }
 `;
@@ -213,39 +216,86 @@ export const Unassigned = styled.span`
   color: ${Xquare_colors.slate[400]};
 `;
 
-export const SourceBadge = styled.span<{ source: "neis" | "school" }>`
-  background: ${({ source }) =>
-    source === "neis" ? Xquare_colors.blue[100] : Xquare_colors.purple[100]};
-  border-radius: 999px;
-  color: ${({ source }) =>
-    source === "neis" ? Xquare_colors.blue[400] : Xquare_colors.purple[400]};
-  display: inline-flex;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: normal;
-  padding: 5px 10px;
+export const TimetableControls = styled.div`
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
 `;
 
-export const TimetableNotice = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  line-height: normal;
+// 교시 · 월~금. 요일 칸이 남는 폭을 똑같이 나눔
+export const TimetableTable = styled.table`
+  ${TABLE}
 
-  p {
-    margin: 0;
+  thead th:first-of-type {
+    width: 120px;
   }
 
-  p:first-of-type {
+  thead th[data-today] {
+    color: ${Xquare_colors.purple[400]};
+  }
+
+  /* 교시 칸은 행 머리지만 본문 행과 같은 모양 */
+  tbody th {
+    background: none;
     color: ${Xquare_colors.slate[900]};
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
   }
 
-  p:last-of-type {
-    color: ${Xquare_colors.slate[600]};
-    font-size: 13px;
+  /* 행 높이 64px + 아래 구분선 1px */
+  tbody th,
+  td {
+    height: 65px;
   }
+`;
+
+export const TimetableDate = styled.span`
+  color: ${Xquare_colors.slate[400]};
+  font-size: 12px;
+  font-weight: 400;
+  /* 앞의 공백(약 3px)과 합쳐 요일과 6px 간격 */
+  margin-left: 3px;
+
+  [data-today] > & {
+    color: inherit;
+  }
+`;
+
+export const CellStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: normal;
+`;
+
+export const CellSub = styled.span`
+  color: ${Xquare_colors.slate[400]};
+  font-size: 12px;
+  font-weight: 400;
+`;
+
+export const LessonSubject = styled.span`
+  align-items: center;
+  display: flex;
+  gap: 6px;
+
+  &[data-changed] {
+    color: ${Xquare_colors.purple[400]};
+    font-weight: 500;
+  }
+`;
+
+export const ChangedBadge = styled.span`
+  background: ${Xquare_colors.purple[100]};
+  border-radius: 999px;
+  color: ${Xquare_colors.purple[400]};
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 10px;
+`;
+
+export const NoLesson = styled.span`
+  color: ${Xquare_colors.slate[400]};
 `;
 
 export const ScheduleFormBox = styled.form`
@@ -266,10 +316,4 @@ export const DateInput = styled(TitleInput)`
   &[data-empty] {
     color: ${Xquare_colors.slate[400]};
   }
-`;
-
-export const ReadonlyInput = styled(TitleInput)`
-  background: ${Xquare_colors.slate[50]};
-  border-color: ${Xquare_colors.slate[200]};
-  color: ${Xquare_colors.slate[600]};
 `;

@@ -2,11 +2,7 @@
 
 import { useId, useLayoutEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import {
-  SCHEDULE_SOURCE_LABEL,
-  SCHEDULE_TITLE_MAX_LENGTH,
-  type Schedule,
-} from "../schedule-content";
+import { SCHEDULE_TITLE_MAX_LENGTH, type Schedule } from "../schedule-content";
 import {
   ActionGroup,
   DangerOutlineButton,
@@ -25,12 +21,7 @@ import {
   TitleInput,
 } from "../notice/page-style";
 import { DeleteScheduleModal } from "./delete-schedule-modal";
-import {
-  DateInput,
-  FieldHint,
-  ReadonlyInput,
-  ScheduleFormBox,
-} from "./page-style";
+import { DateInput, FieldHint, ScheduleFormBox } from "./page-style";
 
 // 등록과 수정이 같은 폼을 씀. schedule이 있으면 수정 화면
 export function ScheduleForm({ schedule }: { schedule?: Schedule }) {
@@ -80,7 +71,7 @@ export function ScheduleForm({ schedule }: { schedule?: Schedule }) {
           <PageDescription>
             {schedule
               ? `${schedule.date} · ${schedule.title}`
-              : "학교에서 직접 정하는 학사 일정을 등록합니다. 나이스 일정은 일정 관리에서 불러옵니다."}
+              : "학교 학사 일정을 등록합니다. 등록한 일정은 일정 관리에서 수정·삭제할 수 있습니다."}
           </PageDescription>
         </PageHeading>
       </PageHead>
@@ -127,22 +118,6 @@ export function ScheduleForm({ schedule }: { schedule?: Schedule }) {
               placeholder="설명을 입력하세요 (선택)"
               onChange={(event) => setDescription(event.target.value)}
             />
-          </FormField>
-
-          <FormField>
-            <FieldLabel htmlFor={`${id}-source`}>출처</FieldLabel>
-            {/* 등록은 항상 학교 입력, 수정은 원래 출처를 그대로 둠 */}
-            <ReadonlyInput
-              id={`${id}-source`}
-              aria-describedby={`${id}-source-hint`}
-              value={SCHEDULE_SOURCE_LABEL[schedule?.source ?? "school"]}
-              readOnly
-            />
-            <FieldHint id={`${id}-source-hint`}>
-              {schedule
-                ? "나이스에서 불러온 일정도 이 화면에서 수정·삭제할 수 있습니다."
-                : "여기서 등록한 일정은 학교 입력으로 저장됩니다."}
-            </FieldHint>
           </FormField>
         </FormCard>
 

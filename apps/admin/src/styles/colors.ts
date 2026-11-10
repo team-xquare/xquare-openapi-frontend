@@ -14,11 +14,6 @@ export const Xquare_colors: ColorGroup = {
     600: "#D94040",
   },
 
-  blue: {
-    100: "#DEE7FB",
-    400: "#256EF4",
-  },
-
   slate: {
     50: "#F9F9FB",
     200: "#E5E8EB",
