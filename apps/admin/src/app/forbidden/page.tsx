@@ -13,8 +13,8 @@ import {
   StatusCode,
 } from "./page-style";
 
-// user 앱(Open API 문서) 주소. 배포 주소가 정해지기 전이라 기본값은 로컬 개발 서버
-// 빌드할 때 값이 들어가므로, 배포 빌드에는 NEXT_PUBLIC_OPEN_API_DOCS_URL을 넣어야 함
+// user 앱(Open API 문서) 주소. next build는 값이 없으면 next.config에서 멈추므로
+// 로컬 user 앱 기본값은 개발 서버(next dev)에서만 쓰임
 const OPEN_API_DOCS_URL =
   process.env.NEXT_PUBLIC_OPEN_API_DOCS_URL || "http://localhost:3000";
 
