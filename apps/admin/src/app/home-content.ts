@@ -57,7 +57,7 @@ export const HOME_ISSUES: HomeIssue[] = [
     title: "2026-09-03 급식 미등록",
     description: "나이스에 이 날짜 급식이 없습니다.",
     actionLabel: "입력",
-    href: "/meal/new",
+    href: "/meal/new?date=2026-09-03",
   },
   {
     title: "2026-09-16 자습 감독 미배정",
