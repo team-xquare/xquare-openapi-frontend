@@ -33,12 +33,24 @@ export default function TeacherRegisterPage() {
   const [subject, setSubject] = useState("");
   const [office, setOffice] = useState("");
   const [position, setPosition] = useState("");
+  const [isLeader, setIsLeader] = useState(false);
   const [isHomeroom, setIsHomeroom] = useState(false);
+  const [grade, setGrade] = useState("");
+  const [classNumber, setClassNumber] = useState("");
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!name.trim() || !subject || !office.trim() || !position) return;
+    if (isHomeroom && (!grade || !classNumber)) return;
     router.push("/teacher");
+  };
+
+  const handleHomeroomChange = (checked: boolean) => {
+    setIsHomeroom(checked);
+    if (!checked) {
+      setGrade("");
+      setClassNumber("");
+    }
   };
 
   return (
@@ -116,14 +128,18 @@ export default function TeacherRegisterPage() {
 
         <CheckboxGroup>
           <CheckboxLabel>
-            <Checkbox type="checkbox" />
+            <Checkbox
+              type="checkbox"
+              checked={isLeader}
+              onChange={(event) => setIsLeader(event.target.checked)}
+            />
             부장
           </CheckboxLabel>
           <CheckboxLabel>
             <Checkbox
               type="checkbox"
               checked={isHomeroom}
-              onChange={(event) => setIsHomeroom(event.target.checked)}
+              onChange={(event) => handleHomeroomChange(event.target.checked)}
             />
             담임을 맡습니다
           </CheckboxLabel>
@@ -132,21 +148,29 @@ export default function TeacherRegisterPage() {
         <TwoFields>
           <Field>
             <FieldLabel>담당 학년</FieldLabel>
-            <select disabled={!isHomeroom}>
-              <option>선택</option>
-              <option>1학년</option>
-              <option>2학년</option>
-              <option>3학년</option>
+            <select
+              disabled={!isHomeroom}
+              value={grade}
+              onChange={(event) => setGrade(event.target.value)}
+            >
+              <option value="">선택</option>
+              <option value="1">1학년</option>
+              <option value="2">2학년</option>
+              <option value="3">3학년</option>
             </select>
           </Field>
           <Field>
             <FieldLabel>담당 반</FieldLabel>
-            <select disabled={!isHomeroom}>
-              <option>선택</option>
-              <option>1반</option>
-              <option>2반</option>
-              <option>3반</option>
-              <option>4반</option>
+            <select
+              disabled={!isHomeroom}
+              value={classNumber}
+              onChange={(event) => setClassNumber(event.target.value)}
+            >
+              <option value="">선택</option>
+              <option value="1">1반</option>
+              <option value="2">2반</option>
+              <option value="3">3반</option>
+              <option value="4">4반</option>
             </select>
           </Field>
         </TwoFields>
