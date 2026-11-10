@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import {
   SidebarContainer,
+  SidebarInner,
   SidebarHeader,
   SidebarNav,
   SidebarLink,
@@ -46,26 +47,28 @@ export function Sidebar() {
 
   return (
     <SidebarContainer aria-label="관리자 사이드바">
-      <SidebarHeader>
-        <span>XQUARE</span>
-        <span>데이터 관리자</span>
-      </SidebarHeader>
-      <SidebarNav aria-label="관리자 메뉴">
-        {PRIMARY_ITEMS.map(renderItem)}
-        <SidebarSectionTitle>데이터 관리</SidebarSectionTitle>
-        {DATA_ITEMS.map(renderItem)}
-      </SidebarNav>
-      <SidebarFooter>
-        {/* 로그인 연동 전 시안의 사용자명을 표시합니다. */}
-        <span>홍길동</span>
-        <LogoutButton
-          type="button"
-          disabled
-          title="로그인 연동 후 사용할 수 있습니다."
-        >
-          로그아웃
-        </LogoutButton>
-      </SidebarFooter>
+      <SidebarInner>
+        <SidebarHeader>
+          <span>XQUARE</span>
+          <span>데이터 관리자</span>
+        </SidebarHeader>
+        <SidebarNav aria-label="관리자 메뉴">
+          {PRIMARY_ITEMS.map(renderItem)}
+          <SidebarSectionTitle>데이터 관리</SidebarSectionTitle>
+          {DATA_ITEMS.map(renderItem)}
+        </SidebarNav>
+        <SidebarFooter>
+          {/* 로그인 연동 전 시안의 사용자명을 표시합니다. */}
+          <span>홍길동</span>
+          <LogoutButton
+            type="button"
+            disabled
+            title="로그인 연동 후 사용할 수 있습니다."
+          >
+            로그아웃
+          </LogoutButton>
+        </SidebarFooter>
+      </SidebarInner>
     </SidebarContainer>
   );
 }
