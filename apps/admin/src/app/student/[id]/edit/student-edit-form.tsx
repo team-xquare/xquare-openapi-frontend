@@ -2,7 +2,10 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { Student } from "../../student-content";
+import {
+  getStudentDeleteRelations,
+  type Student,
+} from "../../student-content";
 import { DeleteModal } from "@/components/delete-modal";
 import {
   Actions,
@@ -141,6 +144,7 @@ export function StudentEditForm({ student }: { student: Student }) {
           <input
             required
             type="email"
+            pattern=".+@dsm\.hs\.kr"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
@@ -171,17 +175,7 @@ export function StudentEditForm({ student }: { student: Student }) {
       {deleteOpen && (
         <DeleteModal
           title={`${student.name} 학생을 삭제할까요?`}
-          relations={[
-            {
-              title: `${student.club} 팀장`,
-              description:
-                "팀장이 비게 됩니다. 동아리 수정에서 새 팀장을 정해 주세요",
-            },
-            {
-              title: `${student.club} 구성원 5명`,
-              description: "구성원 목록에서 빠져 4명이 됩니다",
-            },
-          ]}
+          relations={getStudentDeleteRelations(student)}
           onCancel={() => setDeleteOpen(false)}
           onConfirm={confirmDelete}
         />

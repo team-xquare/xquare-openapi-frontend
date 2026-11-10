@@ -30,7 +30,6 @@ import {
 } from "./page-style";
 
 const PAGE_SIZE = 5;
-const TOTAL_TEACHERS = 48;
 
 export default function TeacherListPage() {
   const [teachers, setTeachers] = useState(TEACHERS);
@@ -60,9 +59,12 @@ export default function TeacherListPage() {
       (query.subject === "all" || teacher.subject === query.subject) &&
       (!query.office || teacher.office.includes(query.office)),
   );
-  const pageCount = 4;
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
-  const rows = currentPage === 1 ? filtered.slice(0, PAGE_SIZE) : [];
+  const rows = filtered.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -205,7 +207,7 @@ export default function TeacherListPage() {
       </TeacherTable>
 
       <Pager>
-        <Total role="status">전체 {TOTAL_TEACHERS}명</Total>
+        <Total role="status">전체 {filtered.length}명</Total>
         <PageList aria-label="페이지">
           <PageButton
             type="button"

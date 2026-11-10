@@ -131,7 +131,7 @@ export default function StudentRegisterPage() {
             required
             type="email"
             placeholder="junseo@dsm.hs.kr"
-            pattern=".+@dsm\\.hs\\.kr"
+            pattern=".+@dsm\.hs\.kr"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />

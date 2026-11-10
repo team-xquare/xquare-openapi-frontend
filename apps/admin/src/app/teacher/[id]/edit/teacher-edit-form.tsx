@@ -48,7 +48,16 @@ export function TeacherEditForm({ teacher }: { teacher: Teacher }) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!name.trim() || !subject || !office.trim() || !position) return;
+    if (isHomeroom && (!grade || !classNumber)) return;
     router.push("/teacher");
+  };
+
+  const handleHomeroomChange = (checked: boolean) => {
+    setIsHomeroom(checked);
+    if (!checked) {
+      setGrade("");
+      setClassNumber("");
+    }
   };
 
   const confirmDelete = () => {
@@ -142,7 +151,7 @@ export function TeacherEditForm({ teacher }: { teacher: Teacher }) {
             <Checkbox
               type="checkbox"
               checked={isHomeroom}
-              onChange={(event) => setIsHomeroom(event.target.checked)}
+              onChange={(event) => handleHomeroomChange(event.target.checked)}
             />
             담임을 맡습니다
           </CheckboxLabel>

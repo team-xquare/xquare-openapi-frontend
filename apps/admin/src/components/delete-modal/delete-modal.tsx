@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import styled from "@emotion/styled";
 import { Xquare_colors } from "../../styles/colors";
 
@@ -23,6 +24,46 @@ export function DeleteModal({
   onCancel,
   onConfirm,
 }: DeleteModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    panel?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCancel();
+        return;
+      }
+
+      if (event.key !== "Tab" || !panel) return;
+      const focusable = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus();
+    };
+  }, [onCancel]);
+
   return (
     <Overlay>
       <Dialog
@@ -33,7 +74,7 @@ export function DeleteModal({
           if (event.target === event.currentTarget) onCancel();
         }}
       >
-        <Panel>
+        <Panel ref={panelRef} tabIndex={-1}>
           <Heading id="delete-modal-title">{title}</Heading>
           <Description>{description}</Description>
           <Relations>

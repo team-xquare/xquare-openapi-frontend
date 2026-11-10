@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { STUDENTS, type Student } from "./student-content";
+import {
+  getStudentDeleteRelations,
+  STUDENTS,
+  type Student,
+} from "./student-content";
 import { DeleteModal } from "@/components/delete-modal";
 import {
   Actions,
@@ -197,17 +201,7 @@ export default function StudentListPage() {
       {deleteTarget && (
         <DeleteModal
           title={`${deleteTarget.name} 학생을 삭제할까요?`}
-          relations={[
-            {
-              title: `${deleteTarget.club} 팀장`,
-              description:
-                "팀장이 비게 됩니다. 동아리 수정에서 새 팀장을 정해 주세요",
-            },
-            {
-              title: `${deleteTarget.club} 구성원 5명`,
-              description: "구성원 목록에서 빠져 4명이 됩니다",
-            },
-          ]}
+          relations={getStudentDeleteRelations(deleteTarget)}
           onCancel={() => setDeleteTarget(null)}
           onConfirm={confirmDelete}
         />

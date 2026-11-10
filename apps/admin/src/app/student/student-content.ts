@@ -8,6 +8,8 @@ export type Student = {
   email: string;
   club: string;
   birthday?: string;
+  isClubLeader?: boolean;
+  clubMemberCount?: number;
 };
 
 export const STUDENTS: Student[] = [
@@ -21,6 +23,8 @@ export const STUDENTS: Student[] = [
     email: "example@dsm.hs.kr",
     club: "DMS",
     birthday: "2009-07-28",
+    isClubLeader: true,
+    clubMemberCount: 5,
   },
   {
     id: "student-2",
@@ -133,3 +137,30 @@ export const STUDENTS: Student[] = [
     club: "PiCK",
   },
 ];
+
+export function getStudentDeleteRelations(student: Student) {
+  if (student.club === "미가입" || student.club === "없음") return [];
+
+  const relations = [
+    {
+      title: `소속 동아리 ${student.club}`,
+      description: "학생이 동아리 구성원 목록에서 제외됩니다",
+    },
+  ];
+
+  if (student.isClubLeader) {
+    relations.unshift({
+      title: `${student.club} 팀장`,
+      description: "팀장 정보가 비게 됩니다. 동아리 수정에서 새 팀장을 정해 주세요",
+    });
+  }
+
+  if (student.clubMemberCount !== undefined) {
+    relations.push({
+      title: `${student.club} 구성원 ${student.clubMemberCount}명`,
+      description: `구성원 목록에서 빠져 ${Math.max(0, student.clubMemberCount - 1)}명이 됩니다`,
+    });
+  }
+
+  return relations;
+}
