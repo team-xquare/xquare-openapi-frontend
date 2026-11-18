@@ -273,11 +273,13 @@ export function createApiClient(options: ApiClientOptions) {
         prepare({ method: "POST", body: { refreshToken: sent } }),
       );
       if (!response.ok) {
+        const error = await toError(response);
+        // 본문까지 읽은 뒤에 확인해야, 그사이 다른 탭이 새로 로그인한 토큰을 지우지 않음
         const current = options.storage.get()?.refreshToken;
         if (!current) throw loginRequired();
         // 리프레시 토큰은 한 번 쓰면 폐기돼서, 다른 탭이 먼저 바꿨다면 거절돼도 그 새 토큰을 쓰면 됨
         if (current !== sent) return;
-        throw await toError(response);
+        throw error;
       }
       const next = await parse<unknown>(response);
       if (!isAuthTokens(next)) throw invalidResponse(response.status);

@@ -552,3 +552,40 @@ test("재시도할 때는 처음 보낸 본문을 그대로 보냄", async () =>
 
   assert.deepEqual(calls.at(-1)?.body, { name: "초안" });
 });
+
+test("재발급 거절 응답을 읽는 사이 다른 탭이 로그인하면 그 토큰을 지우지 않음", async () => {
+  const { storage, current } = memoryStorage(OLD);
+  let expired = 0;
+  const { fetchFn } = fakeFetch((call) => {
+    if (call.path === "/auth/reissue") {
+      // 헤더는 왔고 본문을 읽는 동안 다른 탭이 새로 로그인해 저장함
+      setTimeout(() => storage.set(NEW), 0);
+      const body = new ReadableStream({
+        async start(controller) {
+          await sleep(10);
+          controller.enqueue(
+            new TextEncoder().encode(
+              JSON.stringify({ code: "INVALID_REFRESH_TOKEN", message: "폐기된 토큰" }),
+            ),
+          );
+          controller.close();
+        },
+      });
+      return new Response(body, { status: 401 });
+    }
+    if (call.authorization === "Bearer access-new") return json(200, { ok: true });
+    return json(401, { code: "INVALID_TOKEN", message: "만료" });
+  });
+  const api = createApiClient({
+    baseUrl: BASE,
+    storage,
+    fetch: fetchFn,
+    onSessionExpired: () => {
+      expired += 1;
+    },
+  });
+
+  assert.deepEqual(await api.get("/students"), { ok: true });
+  assert.deepEqual(current(), NEW);
+  assert.equal(expired, 0);
+});
