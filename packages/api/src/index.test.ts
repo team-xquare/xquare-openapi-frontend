@@ -60,6 +60,15 @@ function fakeFetch(handler: (call: Call) => Response | Promise<Response>) {
 const OLD: AuthTokens = { accessToken: "access-old", refreshToken: "refresh-old" };
 const NEW: AuthTokens = { accessToken: "access-new", refreshToken: "refresh-new" };
 
+// 서버 액세스 토큰처럼 sub(사용자 id)가 들어 있는 가짜 JWT
+function fakeJwt(sub: string, nonce: string) {
+  const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  return `${encode({ alg: "HS256" })}.${encode({ sub, nonce })}.signature`;
+}
+const USER1_OLD: AuthTokens = { accessToken: fakeJwt("1", "old"), refreshToken: "refresh-1-old" };
+const USER1_NEW: AuthTokens = { accessToken: fakeJwt("1", "new"), refreshToken: "refresh-1-new" };
+const USER2: AuthTokens = { accessToken: fakeJwt("2", "login"), refreshToken: "refresh-2" };
+
 test("로그인하면 토큰 없이 요청하고 받은 토큰을 저장함", async () => {
   const { storage, current } = memoryStorage();
   const { fetchFn, calls } = fakeFetch(() => json(200, NEW));
@@ -283,16 +292,16 @@ test("재발급이 5xx로 실패하면 로그아웃하지 않고 토큰을 그�
   assert.equal(expired, 0);
 });
 
-test("다른 탭이 먼저 재발급해 거절되면 그 탭의 새 토큰으로 다시 요청함", async () => {
-  const { storage, current } = memoryStorage(OLD);
+test("다른 탭이 먼저 재발급해 거절되면 그 탭의 새 토큰으로 다시 요청함 (같은 사용자)", async () => {
+  const { storage, current } = memoryStorage(USER1_OLD);
   let expired = 0;
   const { fetchFn, calls } = fakeFetch((call) => {
     if (call.path === "/auth/reissue") {
       // 이 탭의 재발급 요청이 서버에 닿는 동안 다른 탭이 먼저 바꿔 저장함
-      storage.set(NEW);
+      storage.set(USER1_NEW);
       return json(401, { code: "INVALID_REFRESH_TOKEN", message: "폐기된 토큰" });
     }
-    if (call.authorization === "Bearer access-new") return json(200, { ok: true });
+    if (call.authorization === `Bearer ${USER1_NEW.accessToken}`) return json(200, { ok: true });
     return json(401, { code: "INVALID_TOKEN", message: "만료" });
   });
   const api = createApiClient({
@@ -305,9 +314,53 @@ test("다른 탭이 먼저 재발급해 거절되면 그 탭의 새 토큰으로
   });
 
   assert.deepEqual(await api.get("/students"), { ok: true });
-  assert.deepEqual(current(), NEW);
+  assert.deepEqual(current(), USER1_NEW);
   assert.equal(expired, 0);
-  assert.equal(calls.at(-1)?.authorization, "Bearer access-new");
+  assert.equal(calls.at(-1)?.authorization, `Bearer ${USER1_NEW.accessToken}`);
+});
+
+test("다른 탭에서 다른 계정으로 로그인했으면 이전 요청을 새 계정 토큰으로 보내지 않음", async () => {
+  for (const changed of [USER2, NEW]) {
+    // NEW는 사용자 id를 읽을 수 없는 토큰이라 같은 사용자인지 확인할 수 없음
+    const { storage, current } = memoryStorage(USER1_OLD);
+    const { fetchFn, calls } = fakeFetch((call) => {
+      if (call.path === "/students/1") {
+        storage.set(changed);
+        return json(401, { code: "INVALID_TOKEN", message: "만료" });
+      }
+      return json(200, { ok: true });
+    });
+    const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+    await assert.rejects(
+      api.patch("/students/1", { name: "1번 사용자가 보낸 수정" }),
+      (error: unknown) => error instanceof ApiError && error.code === "INVALID_TOKEN",
+    );
+    assert.equal(calls.length, 1);
+    assert.deepEqual(current(), changed);
+  }
+});
+
+test("같은 리프레시 토큰으로 다시 로그인해도 이전 재발급 결과가 새 로그인 토큰을 덮어쓰지 않음", async () => {
+  const { storage, current } = memoryStorage(OLD);
+  const RELOGIN: AuthTokens = { accessToken: "access-relogin", refreshToken: OLD.refreshToken };
+  const { fetchFn } = fakeFetch(async (call) => {
+    if (call.path === "/auth/login") return json(200, RELOGIN);
+    if (call.path === "/auth/reissue") {
+      await sleep(20);
+      return json(200, NEW);
+    }
+    return json(401, { code: "INVALID_TOKEN", message: "만료" });
+  });
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  const oldRequest = api.get("/students");
+  await sleep(5);
+  await api.auth.logout();
+  await api.auth.login({ username: "tester", password: "Password1!" });
+
+  await assert.rejects(oldRequest, ApiError);
+  assert.deepEqual(current(), RELOGIN);
 });
 
 test("재발급하는 동안 로그아웃하면 새 토큰을 저장하지 않음", async () => {
@@ -553,13 +606,13 @@ test("재시도할 때는 처음 보낸 본문을 그대로 보냄", async () =>
   assert.deepEqual(calls.at(-1)?.body, { name: "초안" });
 });
 
-test("재발급 거절 응답을 읽는 사이 다른 탭이 로그인하면 그 토큰을 지우지 않음", async () => {
-  const { storage, current } = memoryStorage(OLD);
+test("재발급 거절 응답을 읽는 사이 다른 탭이 다시 로그인하면 그 토큰을 지우지 않음 (같은 사용자)", async () => {
+  const { storage, current } = memoryStorage(USER1_OLD);
   let expired = 0;
   const { fetchFn } = fakeFetch((call) => {
     if (call.path === "/auth/reissue") {
       // 헤더는 왔고 본문을 읽는 동안 다른 탭이 새로 로그인해 저장함
-      setTimeout(() => storage.set(NEW), 0);
+      setTimeout(() => storage.set(USER1_NEW), 0);
       const body = new ReadableStream({
         async start(controller) {
           await sleep(10);
@@ -573,7 +626,7 @@ test("재발급 거절 응답을 읽는 사이 다른 탭이 로그인하면 그
       });
       return new Response(body, { status: 401 });
     }
-    if (call.authorization === "Bearer access-new") return json(200, { ok: true });
+    if (call.authorization === `Bearer ${USER1_NEW.accessToken}`) return json(200, { ok: true });
     return json(401, { code: "INVALID_TOKEN", message: "만료" });
   });
   const api = createApiClient({
@@ -586,6 +639,6 @@ test("재발급 거절 응답을 읽는 사이 다른 탭이 로그인하면 그
   });
 
   assert.deepEqual(await api.get("/students"), { ok: true });
-  assert.deepEqual(current(), NEW);
+  assert.deepEqual(current(), USER1_NEW);
   assert.equal(expired, 0);
 });

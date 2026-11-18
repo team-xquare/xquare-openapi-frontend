@@ -140,11 +140,10 @@ function subjectOf(token: string): string | null {
   }
 }
 
-// 두 토큰이 같은 사용자 것인지. 토큰에서 사용자를 못 읽으면 같다고 봄 (로그인 횟수로 따로 확인)
+// 두 토큰이 같은 사용자 것인지 확실할 때만 true. 토큰에서 사용자를 못 읽으면 false
 function sameUser(a: string, b: string) {
   const subjectA = subjectOf(a);
-  const subjectB = subjectOf(b);
-  return subjectA === null || subjectB === null || subjectA === subjectB;
+  return subjectA !== null && subjectA === subjectOf(b);
 }
 
 function abortReason(signal: AbortSignal): unknown {
@@ -188,8 +187,14 @@ export function createApiClient(options: ApiClientOptions) {
     options.fetch ?? ((input, init) => fetch(input, init));
   // 로그인 · 로그아웃할 때마다 바뀜. 재시도 전에 같은 로그인인지 확인하는 데 씀
   let session = 0;
+  // 이 탭이 로그인 · 재발급으로 직접 받은 마지막 액세스 토큰. 다른 탭이 바꾼 토큰과 구분하는 데 씀
+  let issuedHere: string | null = null;
   // 지금 진행 중인 재발급. 같은 리프레시 토큰으로 시작한 요청끼리만 같이 기다림
-  let refreshing: { token: string; promise: Promise<void> } | null = null;
+  let refreshing: {
+    token: string;
+    session: number;
+    promise: Promise<void>;
+  } | null = null;
 
   // 본문은 처음 한 번만 만들어서, 재시도 때 호출한 쪽이 객체를 바꿔도 같은 내용을 보냄
   function prepare(init: RequestOptions): PreparedRequest {
@@ -265,7 +270,10 @@ export function createApiClient(options: ApiClientOptions) {
   function reissue(): Promise<void> {
     const sent = options.storage.get()?.refreshToken;
     if (!sent) return Promise.reject(loginRequired());
-    if (refreshing?.token === sent) return refreshing.promise;
+    const startedSession = session;
+    if (refreshing?.token === sent && refreshing.session === startedSession) {
+      return refreshing.promise;
+    }
 
     const work = (async () => {
       const response = await send(
@@ -286,10 +294,15 @@ export function createApiClient(options: ApiClientOptions) {
       // 본문을 읽는 사이 로그아웃했거나, 다른 탭 · 다른 로그인으로 토큰이 바뀌었으면 저장하지 않음
       const latest = options.storage.get()?.refreshToken;
       if (!latest) throw loginRequired();
-      if (latest === sent) options.storage.set(next);
+      // 그사이 다시 로그인했으면 같은 리프레시 토큰이어도 새 로그인 토큰을 덮어쓰지 않음
+      if (latest === sent && session === startedSession) {
+        options.storage.set(next);
+        issuedHere = next.accessToken;
+      }
     })();
     const entry = {
       token: sent,
+      session: startedSession,
       promise: work.finally(() => {
         if (refreshing === entry) refreshing = null;
       }),
@@ -303,6 +316,7 @@ export function createApiClient(options: ApiClientOptions) {
     if (!options.storage.get()) return;
     options.storage.clear();
     session += 1;
+    issuedHere = null;
     options.onSessionExpired?.();
   }
 
@@ -333,7 +347,11 @@ export function createApiClient(options: ApiClientOptions) {
       const retryToken = options.storage.get()?.accessToken;
       if (!retryToken) throw loginRequired();
       // 그사이 로그아웃 후 다른 계정으로 로그인했으면, 이전 계정의 요청을 새 계정으로 보내지 않음
-      if (session !== startedSession || !sameUser(usedToken, retryToken)) {
+      // 이 탭이 받은 토큰이 아니면(다른 탭이 바꿈) 같은 사용자라는 게 확인될 때만 다시 보냄
+      const sameSession =
+        session === startedSession &&
+        (retryToken === issuedHere || sameUser(usedToken, retryToken));
+      if (!sameSession) {
         throw error;
       }
       response = await send(path, prepared, retryToken);
@@ -363,12 +381,14 @@ export function createApiClient(options: ApiClientOptions) {
         throw new ApiError(0, STORAGE_ERROR, STORAGE_ERROR_MESSAGE);
       }
       session += 1;
+      issuedHere = tokens.accessToken;
       return tokens;
     },
     // 서버에 로그아웃 API가 없어서 저장한 토큰만 지움
     logout() {
       options.storage.clear();
       session += 1;
+      issuedHere = null;
     },
     isLoggedIn() {
       return options.storage.get() !== null;
