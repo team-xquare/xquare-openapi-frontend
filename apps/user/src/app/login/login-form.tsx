@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useState, type FormEvent } from "react";
+import { useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@xquare/api";
 import { api } from "@/lib/api";
@@ -28,14 +28,19 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // 진행 중인 로그인 요청. 화면을 떠나면 취소해서 다른 화면을 홈으로 덮어쓰지 않게 함
+  const attemptRef = useRef<AbortController | null>(null);
 
   // 다른 페이지로 이동해도 화면이 숨겨진 채 상태가 남으므로,
   // 인프라 서비스처럼 다시 들어오면 빈 폼이 되도록 숨겨질 때 입력값을 비움
   useLayoutEffect(() => {
     return () => {
+      attemptRef.current?.abort();
+      attemptRef.current = null;
       setUsername("");
       setPassword("");
       setError("");
+      setSubmitting(false);
     };
   }, []);
 
@@ -43,12 +48,18 @@ export function LoginForm() {
     event.preventDefault();
     if (!username.trim() || !password || submitting) return;
 
+    const attempt = new AbortController();
+    attemptRef.current = attempt;
     setSubmitting(true);
     setError("");
     try {
-      await api.auth.login({ username: username.trim(), password });
-      router.push("/");
+      await api.auth.login(
+        { username: username.trim(), password },
+        { signal: attempt.signal },
+      );
+      if (!attempt.signal.aborted) router.push("/");
     } catch (loginError) {
+      if (attempt.signal.aborted) return;
       // 서버 메시지(아이디·비밀번호 불일치, 5회 실패 잠금 등)를 그대로 보여줌
       setError(
         loginError instanceof ApiError
@@ -56,7 +67,10 @@ export function LoginForm() {
           : "로그인하지 못했습니다. 잠시 후 다시 시도해주세요.",
       );
     } finally {
-      setSubmitting(false);
+      if (attemptRef.current === attempt) {
+        attemptRef.current = null;
+        setSubmitting(false);
+      }
     }
   };
 
@@ -75,6 +89,7 @@ export function LoginForm() {
             label="아이디"
             placeholder="아이디를 입력해주세요"
             autoComplete="username"
+            disabled={submitting}
           />
           <Input_text
             value={password}
@@ -86,6 +101,7 @@ export function LoginForm() {
             placeholder="비밀번호를 입력해주세요"
             type="password"
             autoComplete="current-password"
+            disabled={submitting}
             title={error}
             titleColor={ERROR_COLOR}
           />

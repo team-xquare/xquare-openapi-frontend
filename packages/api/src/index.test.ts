@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   ApiError,
   NETWORK_ERROR,
+  STORAGE_ERROR,
   createApiClient,
   type AuthTokens,
   type TokenStorage,
@@ -390,4 +391,164 @@ test("로그인 응답에 토큰이 없으면 저장하지 않고 에러", async
     (error: unknown) => error instanceof ApiError && error.code === "INVALID_RESPONSE",
   );
   assert.equal(current(), null);
+});
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+test("빈 토큰은 로그인 성공으로 보지 않음", async () => {
+  const { storage, current } = memoryStorage();
+  const { fetchFn } = fakeFetch(() => json(200, { accessToken: "", refreshToken: "refresh" }));
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  await assert.rejects(
+    api.auth.login({ username: "tester", password: "Password1!" }),
+    (error: unknown) => error instanceof ApiError && error.code === "INVALID_RESPONSE",
+  );
+  assert.equal(current(), null);
+});
+
+test("토큰을 저장하지 못하면 로그인이 실패로 끝남", async () => {
+  const storage: TokenStorage = {
+    get: () => null,
+    set: () => {
+      throw new Error("QuotaExceededError");
+    },
+    clear: () => {},
+  };
+  const { fetchFn } = fakeFetch(() => json(200, NEW));
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  await assert.rejects(
+    api.auth.login({ username: "tester", password: "Password1!" }),
+    (error: unknown) => error instanceof ApiError && error.code === STORAGE_ERROR,
+  );
+});
+
+test("로그인 응답이 온 뒤 취소됐으면 토큰을 저장하지 않음", async () => {
+  const { storage, current } = memoryStorage();
+  const controller = new AbortController();
+  const { fetchFn } = fakeFetch(() => {
+    controller.abort();
+    return json(200, NEW);
+  });
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  await assert.rejects(
+    api.auth.login({ username: "tester", password: "Password1!" }, { signal: controller.signal }),
+    (error: unknown) => error instanceof Error && error.name === "AbortError",
+  );
+  assert.equal(current(), null);
+});
+
+test("헤더 이름 대소문자가 달라도 Content-Type은 하나만 보냄, 경로에 / 가 없어도 같은 서버로", async () => {
+  const { storage } = memoryStorage(OLD);
+  let received: { url: string; init?: RequestInit } | undefined;
+  const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    received = { url: String(input), init };
+    return json(200, { ok: true });
+  }) as typeof fetch;
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  await api.post("students", { name: "장윤호" }, { headers: { "content-type": "application/json" } });
+
+  assert.equal(received?.url, "https://api.test/students");
+  assert.equal(new Headers(received?.init?.headers).get("Content-Type"), "application/json");
+});
+
+test("재발급 응답 본문을 읽는 사이 로그아웃하면 새 토큰을 저장하지 않음", async () => {
+  const { storage, current } = memoryStorage(OLD);
+  const { fetchFn } = fakeFetch((call) => {
+    if (call.path === "/auth/reissue") {
+      setTimeout(() => storage.clear(), 0);
+      const body = new ReadableStream({
+        async start(controller) {
+          await sleep(10);
+          controller.enqueue(new TextEncoder().encode(JSON.stringify(NEW)));
+          controller.close();
+        },
+      });
+      return new Response(body, { status: 200 });
+    }
+    return json(401, { code: "INVALID_TOKEN", message: "만료" });
+  });
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  await assert.rejects(api.get("/students"), ApiError);
+  assert.equal(current(), null);
+});
+
+test("다른 계정으로 다시 로그인하면 이전 재발급을 기다리지 않고, 이전 요청을 새 계정으로 보내지 않음", async () => {
+  const { storage } = memoryStorage(OLD);
+  const B: AuthTokens = { accessToken: "access-b", refreshToken: "refresh-b" };
+  const B2: AuthTokens = { accessToken: "access-b2", refreshToken: "refresh-b2" };
+  const { fetchFn, calls } = fakeFetch(async (call) => {
+    if (call.path === "/auth/login") return json(200, B);
+    if (call.path === "/auth/reissue") {
+      const { refreshToken } = call.body as { refreshToken: string };
+      if (refreshToken === "refresh-old") {
+        await sleep(30);
+        return json(401, { code: "INVALID_REFRESH_TOKEN", message: "폐기된 토큰" });
+      }
+      return json(200, B2);
+    }
+    if (call.authorization === "Bearer access-b2") return json(200, { path: call.path });
+    return json(401, { code: "INVALID_TOKEN", message: "만료" });
+  });
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  const oldRequest = api.patch("/students/1", { name: "A가 보낸 수정" });
+  await sleep(5);
+  await api.auth.login({ username: "b", password: "Password1!" });
+  const started = Date.now();
+  const newResult = await api.get("/teachers");
+
+  assert.deepEqual(newResult, { path: "/teachers" });
+  assert.ok(Date.now() - started < 25, "이전 계정의 재발급을 기다리지 않아야 함");
+  await assert.rejects(oldRequest, ApiError);
+  assert.equal(
+    calls.some((call) => call.path === "/students/1" && call.authorization === "Bearer access-b2"),
+    false,
+  );
+});
+
+test("재발급을 기다리는 동안 취소하면 그 요청만 바로 끝남", async () => {
+  const { storage } = memoryStorage(OLD);
+  const { fetchFn } = fakeFetch(async (call) => {
+    if (call.path === "/auth/reissue") {
+      await sleep(50);
+      return json(200, NEW);
+    }
+    if (call.authorization === "Bearer access-new") return json(200, { ok: true });
+    return json(401, { code: "INVALID_TOKEN", message: "만료" });
+  });
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+  const controller = new AbortController();
+
+  const cancelled = api.get("/students", { signal: controller.signal });
+  const other = api.get("/teachers");
+  await sleep(5);
+  const abortedAt = Date.now();
+  controller.abort();
+
+  await assert.rejects(cancelled, (error: unknown) => error instanceof Error && error.name === "AbortError");
+  assert.ok(Date.now() - abortedAt < 25, "취소하면 재발급을 끝까지 기다리지 않아야 함");
+  assert.deepEqual(await other, { ok: true });
+});
+
+test("재시도할 때는 처음 보낸 본문을 그대로 보냄", async () => {
+  const { storage } = memoryStorage(OLD);
+  const payload = { name: "초안" };
+  const { fetchFn, calls } = fakeFetch((call) => {
+    if (call.path === "/auth/reissue") {
+      payload.name = "수정본";
+      return json(200, NEW);
+    }
+    if (call.authorization === "Bearer access-new") return json(200, { ok: true });
+    return json(401, { code: "INVALID_TOKEN", message: "만료" });
+  });
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  await api.patch("/students/1", payload);
+
+  assert.deepEqual(calls.at(-1)?.body, { name: "초안" });
 });
