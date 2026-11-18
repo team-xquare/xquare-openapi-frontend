@@ -642,3 +642,82 @@ test("재발급 거절 응답을 읽는 사이 다른 탭이 다시 로그인하
   assert.deepEqual(current(), USER1_NEW);
   assert.equal(expired, 0);
 });
+
+test("같은 리프레시 토큰으로 다시 로그인한 뒤 이전 재발급이 거절돼도 새 세션을 지우지 않음", async () => {
+  const { storage, current } = memoryStorage(OLD);
+  const RELOGIN: AuthTokens = { accessToken: "access-relogin", refreshToken: OLD.refreshToken };
+  let expired = 0;
+  const { fetchFn } = fakeFetch(async (call) => {
+    if (call.path === "/auth/login") return json(200, RELOGIN);
+    if (call.path === "/auth/reissue") {
+      await sleep(20);
+      return json(401, { code: "INVALID_REFRESH_TOKEN", message: "폐기된 토큰" });
+    }
+    return json(401, { code: "INVALID_TOKEN", message: "만료" });
+  });
+  const api = createApiClient({
+    baseUrl: BASE,
+    storage,
+    fetch: fetchFn,
+    onSessionExpired: () => {
+      expired += 1;
+    },
+  });
+
+  const oldRequest = api.get("/students");
+  await sleep(5);
+  api.auth.logout();
+  await api.auth.login({ username: "tester", password: "Password1!" });
+
+  await assert.rejects(oldRequest, ApiError);
+  assert.deepEqual(current(), RELOGIN);
+  assert.equal(expired, 0);
+});
+
+test("이미 취소된 요청은 401을 받아도 재발급을 시작하지 않음", async () => {
+  const { storage, current } = memoryStorage(OLD);
+  const controller = new AbortController();
+  const { fetchFn, calls } = fakeFetch(() => {
+    controller.abort();
+    return json(401, { code: "INVALID_TOKEN", message: "만료" });
+  });
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  await assert.rejects(
+    api.get("/students", { signal: controller.signal }),
+    (error: unknown) => error instanceof Error && error.name === "AbortError",
+  );
+  assert.equal(calls.filter((call) => call.path === "/auth/reissue").length, 0);
+  assert.deepEqual(current(), OLD);
+});
+
+test("취소 사유가 400 · 401 ApiError여도 재발급 거절로 보고 로그아웃하지 않음", async () => {
+  const { storage, current } = memoryStorage(OLD);
+  let expired = 0;
+  const { fetchFn } = fakeFetch(async (call) => {
+    if (call.path === "/auth/reissue") {
+      await sleep(30);
+      return json(200, NEW);
+    }
+    return json(401, { code: "INVALID_TOKEN", message: "만료" });
+  });
+  const api = createApiClient({
+    baseUrl: BASE,
+    storage,
+    fetch: fetchFn,
+    onSessionExpired: () => {
+      expired += 1;
+    },
+  });
+  const controller = new AbortController();
+  const reason = new ApiError(401, "CANCELLED_BY_CALLER", "화면을 떠남");
+
+  const request = api.get("/students", { signal: controller.signal });
+  await sleep(5);
+  controller.abort(reason);
+
+  await assert.rejects(request, (error: unknown) => error === reason);
+  assert.equal(expired, 0);
+  await sleep(40);
+  assert.deepEqual(current(), NEW);
+});

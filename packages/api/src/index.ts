@@ -153,7 +153,11 @@ function abortReason(signal: AbortSignal): unknown {
 // 여러 요청이 같이 기다리는 Promise는 그대로 두고, 이 요청의 기다림만 취소 신호로 끝냄
 function waitWithSignal<T>(promise: Promise<T>, signal?: AbortSignal) {
   if (!signal) return promise;
-  if (signal.aborted) return Promise.reject(abortReason(signal));
+  if (signal.aborted) {
+    // 다른 대기자가 없어도 공유 Promise의 실패가 처리되지 않은 채 남지 않게 함
+    promise.catch(() => {});
+    return Promise.reject(abortReason(signal));
+  }
   return new Promise<T>((resolve, reject) => {
     const onAbort = () => reject(abortReason(signal));
     signal.addEventListener("abort", onAbort, { once: true });
@@ -285,8 +289,9 @@ export function createApiClient(options: ApiClientOptions) {
         // 본문까지 읽은 뒤에 확인해야, 그사이 다른 탭이 새로 로그인한 토큰을 지우지 않음
         const current = options.storage.get()?.refreshToken;
         if (!current) throw loginRequired();
-        // 리프레시 토큰은 한 번 쓰면 폐기돼서, 다른 탭이 먼저 바꿨다면 거절돼도 그 새 토큰을 쓰면 됨
-        if (current !== sent) return;
+        // 리프레시 토큰은 한 번 쓰면 폐기돼서, 다른 탭이 먼저 바꿨거나
+        // 그사이 다시 로그인했다면 이 거절은 지금 세션과 상관없음
+        if (current !== sent || session !== startedSession) return;
         throw error;
       }
       const next = await parse<unknown>(response);
@@ -336,11 +341,24 @@ export function createApiClient(options: ApiClientOptions) {
 
       // 다른 요청이 그사이 재발급했으면 새 토큰으로 바로 다시 보냄
       if (options.storage.get()?.accessToken === usedToken) {
+        // 이미 취소된 요청이면 재발급을 시작하지 않음
+        if (init.signal?.aborted) throw abortReason(init.signal);
         try {
           await waitWithSignal(reissue(), init.signal);
         } catch (reissueError) {
-          // 서버가 재발급을 거절했을 때만 로그아웃. 네트워크 오류 · 5xx는 토큰을 그대로 둠
-          if (isSessionRejected(reissueError)) endSession();
+          // 서버가 재발급을 거절했을 때만 로그아웃. 네트워크 오류 · 5xx · 직접 취소는 토큰을 그대로 둠
+          const cancelled =
+            init.signal?.aborted === true &&
+            (reissueError === init.signal.reason ||
+              (reissueError instanceof Error &&
+                reissueError.name === "AbortError"));
+          if (
+            !cancelled &&
+            isSessionRejected(reissueError) &&
+            session === startedSession
+          ) {
+            endSession();
+          }
           throw reissueError;
         }
       }
