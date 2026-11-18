@@ -7,6 +7,8 @@ const API_BASE_URL =
 export const api = createApiClient({
   baseUrl: API_BASE_URL,
   storage: createLocalTokenStorage("xquare-openapi.admin.tokens"),
+  // 같은 앱을 연 탭끼리 토큰 재발급을 하나씩 하게 함
+  lockName: "xquare-openapi.admin.tokens",
   // 토큰 재발급까지 실패하면 다시 로그인하도록 로그인 화면으로 보냄
   onSessionExpired: () => {
     if (typeof window !== "undefined") window.location.replace("/login");

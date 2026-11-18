@@ -100,9 +100,32 @@ export interface ApiClientOptions {
   onSessionExpired?: () => void;
   // 테스트에서 가짜 fetch를 넣을 때
   fetch?: typeof fetch;
+  // 같은 저장소를 쓰는 탭끼리 재발급을 하나씩 하게 하는 잠금 이름 (보통 토큰 저장 키)
+  lockName?: string;
+  // 테스트에서 가짜 잠금을 넣을 때. 없으면 브라우저 Web Locks(navigator.locks)를 씀
+  locks?: LockRequester;
+}
+
+export interface LockRequester {
+  request<T>(name: string, callback: () => Promise<T>): Promise<T>;
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;
+
+// 재시도 때 호출한 쪽이 원본을 바꿔도 처음 내용을 보내도록 바뀔 수 있는 본문은 복사해 둠
+function copyRawBody(body: BodyInit): BodyInit {
+  if (body instanceof ArrayBuffer) return body.slice(0);
+  if (typeof URLSearchParams !== "undefined" && body instanceof URLSearchParams) {
+    return new URLSearchParams(body);
+  }
+  if (typeof FormData !== "undefined" && body instanceof FormData) {
+    const copy = new FormData();
+    body.forEach((value, key) => copy.append(key, value));
+    return copy;
+  }
+  // Blob은 바뀌지 않는 값이라 그대로 씀
+  return body;
+}
 
 // 브라우저가 직접 형식을 정하는 본문 (multipart 경계 등). JSON으로 바꾸면 안 됨
 function isRawBody(body: unknown): body is BodyInit {
@@ -216,7 +239,7 @@ export function createApiClient(options: ApiClientOptions) {
     if (!headers.has("Accept")) headers.set("Accept", "application/json");
     let body: BodyInit | undefined;
     if (isRawBody(init.body)) {
-      body = init.body;
+      body = copyRawBody(init.body);
     } else if (init.body !== undefined) {
       body = JSON.stringify(init.body);
       headers.set("Content-Type", "application/json");
@@ -280,6 +303,17 @@ export function createApiClient(options: ApiClientOptions) {
   const invalidResponse = (status: number) =>
     new ApiError(status, "INVALID_RESPONSE", UNKNOWN_ERROR_MESSAGE);
 
+  // 다른 탭도 같은 리프레시 토큰으로 재발급할 수 있어서, 잠금이 있으면 탭끼리 하나씩 함
+  function withReissueLock<T>(task: () => Promise<T>): Promise<T> {
+    const locks =
+      options.locks ??
+      (typeof navigator !== "undefined"
+        ? (navigator as { locks?: LockRequester }).locks
+        : undefined);
+    if (!locks || !options.lockName) return task();
+    return locks.request(`${options.lockName}:reissue`, task);
+  }
+
   // 여러 요청이 동시에 401을 받아도 재발급은 한 번만 함
   function reissue(): Promise<void> {
     const sentTokens = options.storage.get();
@@ -290,7 +324,12 @@ export function createApiClient(options: ApiClientOptions) {
       return refreshing.promise;
     }
 
-    const work = (async () => {
+    const work = withReissueLock(async () => {
+      // 잠금을 기다리는 사이 다른 탭이 먼저 재발급했으면 그 토큰을 씀
+      const before = options.storage.get()?.refreshToken;
+      if (!before) throw loginRequired();
+      if (before !== sent || session !== startedSession) return;
+
       const response = await send(
         "/auth/reissue",
         prepare({ method: "POST", body: { refreshToken: sent } }),
@@ -315,7 +354,7 @@ export function createApiClient(options: ApiClientOptions) {
         options.storage.set(next);
         rotatedFrom.set(next.accessToken, sentTokens.accessToken);
       }
-    })();
+    });
     const entry = {
       token: sent,
       session: startedSession,
@@ -328,8 +367,13 @@ export function createApiClient(options: ApiClientOptions) {
   }
 
   // 동시에 기다리던 요청이 여러 개여도 로그인 화면 이동은 한 번만
-  function endSession() {
-    if (!options.storage.get()) return;
+  // 거절된 리프레시 토큰이 아직 저장돼 있을 때만 지워서, 그사이 다른 탭이 새로 로그인한 토큰은 남김
+  function endSession(rejectedRefreshToken?: string) {
+    const stored = options.storage.get();
+    if (!stored) return;
+    if (rejectedRefreshToken && stored.refreshToken !== rejectedRefreshToken) {
+      return;
+    }
     options.storage.clear();
     session += 1;
     rotatedFrom.clear();
@@ -354,6 +398,7 @@ export function createApiClient(options: ApiClientOptions) {
       if (options.storage.get()?.accessToken === usedToken) {
         // 이미 취소된 요청이면 재발급을 시작하지 않음
         if (init.signal?.aborted) throw abortReason(init.signal);
+        const sentRefreshToken = options.storage.get()?.refreshToken;
         try {
           await waitWithSignal(reissue(), init.signal);
         } catch (reissueError) {
@@ -368,7 +413,7 @@ export function createApiClient(options: ApiClientOptions) {
             isSessionRejected(reissueError) &&
             session === startedSession
           ) {
-            endSession();
+            endSession(sentRefreshToken);
           }
           throw reissueError;
         }

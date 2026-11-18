@@ -400,7 +400,9 @@ test("FormData 본문은 JSON으로 바꾸지 않고 그대로 보냄", async ()
 
   await api.post("/clubs/1/logo", form);
 
-  assert.equal(received?.body, form);
+  assert.ok(received?.body instanceof FormData);
+  assert.notEqual(received?.body, form);
+  assert.equal((received?.body as FormData).get("logo") instanceof Blob, true);
   assert.equal(new Headers(received?.headers).get("Content-Type"), null);
   assert.equal(new Headers(received?.headers).get("Authorization"), "Bearer access-old");
 });
@@ -447,6 +449,15 @@ test("로그인 응답에 토큰이 없으면 저장하지 않고 에러", async
 });
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// 테스트가 직접 열어줄 때까지 기다리는 문
+function gate() {
+  let open!: () => void;
+  const opened = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+  return { opened, open };
+}
 
 test("빈 토큰은 로그인 성공으로 보지 않음", async () => {
   const { storage, current } = memoryStorage();
@@ -530,16 +541,19 @@ test("재발급 응답 본문을 읽는 사이 로그아웃하면 새 토큰을 
   assert.equal(current(), null);
 });
 
-test("다른 계정으로 다시 로그인하면 이전 재발급을 기다리지 않고, 이전 요청을 새 계정으로 보내지 않음", async () => {
+test("다른 계정으로 다시 로그인하면 이전 재발급을 기다리지 않고, 이전 요청을 새 계정으로 보내지 않음", { timeout: 2000 }, async () => {
   const { storage } = memoryStorage(OLD);
   const B: AuthTokens = { accessToken: "access-b", refreshToken: "refresh-b" };
   const B2: AuthTokens = { accessToken: "access-b2", refreshToken: "refresh-b2" };
+  const oldReissue = gate();
+  const oldReissueStarted = gate();
   const { fetchFn, calls } = fakeFetch(async (call) => {
     if (call.path === "/auth/login") return json(200, B);
     if (call.path === "/auth/reissue") {
       const { refreshToken } = call.body as { refreshToken: string };
       if (refreshToken === "refresh-old") {
-        await sleep(30);
+        oldReissueStarted.open();
+        await oldReissue.opened;
         return json(401, { code: "INVALID_REFRESH_TOKEN", message: "폐기된 토큰" });
       }
       return json(200, B2);
@@ -550,13 +564,13 @@ test("다른 계정으로 다시 로그인하면 이전 재발급을 기다리�
   const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
 
   const oldRequest = api.patch("/students/1", { name: "A가 보낸 수정" });
-  await sleep(5);
+  await oldReissueStarted.opened;
   await api.auth.login({ username: "b", password: "Password1!" });
-  const started = Date.now();
-  const newResult = await api.get("/teachers");
 
-  assert.deepEqual(newResult, { path: "/teachers" });
-  assert.ok(Date.now() - started < 25, "이전 계정의 재발급을 기다리지 않아야 함");
+  // 이전 재발급 응답을 아직 붙잡고 있어도 새 계정 요청은 끝나야 함
+  assert.deepEqual(await api.get("/teachers"), { path: "/teachers" });
+
+  oldReissue.open();
   await assert.rejects(oldRequest, ApiError);
   assert.equal(
     calls.some((call) => call.path === "/students/1" && call.authorization === "Bearer access-b2"),
@@ -564,11 +578,14 @@ test("다른 계정으로 다시 로그인하면 이전 재발급을 기다리�
   );
 });
 
-test("재발급을 기다리는 동안 취소하면 그 요청만 바로 끝남", async () => {
+test("재발급을 기다리는 동안 취소하면 그 요청만 바로 끝남", { timeout: 2000 }, async () => {
   const { storage } = memoryStorage(OLD);
+  const reissueGate = gate();
+  const reissueStarted = gate();
   const { fetchFn } = fakeFetch(async (call) => {
     if (call.path === "/auth/reissue") {
-      await sleep(50);
+      reissueStarted.open();
+      await reissueGate.opened;
       return json(200, NEW);
     }
     if (call.authorization === "Bearer access-new") return json(200, { ok: true });
@@ -579,12 +596,13 @@ test("재발급을 기다리는 동안 취소하면 그 요청만 바로 끝남"
 
   const cancelled = api.get("/students", { signal: controller.signal });
   const other = api.get("/teachers");
-  await sleep(5);
-  const abortedAt = Date.now();
+  await reissueStarted.opened;
   controller.abort();
 
+  // 재발급 응답을 아직 붙잡고 있어도 취소한 요청은 끝나야 함
   await assert.rejects(cancelled, (error: unknown) => error instanceof Error && error.name === "AbortError");
-  assert.ok(Date.now() - abortedAt < 25, "취소하면 재발급을 끝까지 기다리지 않아야 함");
+
+  reissueGate.open();
   assert.deepEqual(await other, { ok: true });
 });
 
@@ -782,4 +800,79 @@ test("이 탭에서 두 번 이어서 재발급해도 같은 로그인의 요청
 
   assert.deepEqual(storage.get(), NEWER);
   assert.deepEqual(await slow, { ok: true });
+});
+
+// 탭 여러 개가 같이 쓰는 잠금 (navigator.locks 대신)
+function sharedLocks() {
+  const tails = new Map<string, Promise<unknown>>();
+  return {
+    request<T>(name: string, callback: () => Promise<T>): Promise<T> {
+      const previous = tails.get(name) ?? Promise.resolve();
+      const run = previous.then(callback, callback);
+      tails.set(name, run.catch(() => {}));
+      return run;
+    },
+  };
+}
+
+test("두 탭이 같은 리프레시 토큰으로 재발급해도 한 번만 보내고 둘 다 새 토큰으로 이어감", { timeout: 2000 }, async () => {
+  const { storage, current } = memoryStorage(USER1_OLD);
+  const locks = sharedLocks();
+  let expired = 0;
+  let reissued = 0;
+  const { fetchFn, calls } = fakeFetch(async (call) => {
+    if (call.path === "/auth/reissue") {
+      reissued += 1;
+      if (reissued > 1) {
+        return json(401, { code: "INVALID_REFRESH_TOKEN", message: "폐기된 토큰" });
+      }
+      await sleep(10);
+      return json(200, USER1_NEW);
+    }
+    if (call.authorization === `Bearer ${USER1_NEW.accessToken}`) return json(200, { path: call.path });
+    return json(401, { code: "INVALID_TOKEN", message: "만료" });
+  });
+  const tab = () =>
+    createApiClient({
+      baseUrl: BASE,
+      storage,
+      fetch: fetchFn,
+      lockName: "tokens",
+      locks,
+      onSessionExpired: () => {
+        expired += 1;
+      },
+    });
+  const tabA = tab();
+  const tabB = tab();
+
+  const [a, b] = await Promise.all([tabA.get("/students"), tabB.get("/teachers")]);
+
+  assert.deepEqual(a, { path: "/students" });
+  assert.deepEqual(b, { path: "/teachers" });
+  assert.equal(calls.filter((call) => call.path === "/auth/reissue").length, 1);
+  assert.deepEqual(current(), USER1_NEW);
+  assert.equal(expired, 0);
+});
+
+test("재시도할 때 ArrayBuffer 본문은 처음 보낸 바이트를 그대로 보냄", async () => {
+  const { storage } = memoryStorage(OLD);
+  const buffer = new Uint8Array([1]).buffer;
+  const sentBytes: number[] = [];
+  const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(String(input));
+    const authorization = new Headers(init?.headers).get("Authorization");
+    if (url.pathname === "/auth/reissue") {
+      new Uint8Array(buffer)[0] = 2;
+      return json(200, NEW);
+    }
+    sentBytes.push(new Uint8Array(init?.body as ArrayBuffer)[0]);
+    if (authorization === "Bearer access-new") return json(200, { ok: true });
+    return json(401, { code: "INVALID_TOKEN", message: "만료" });
+  }) as typeof fetch;
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  await api.post("/files", buffer);
+
+  assert.deepEqual(sentBytes, [1, 1]);
 });
