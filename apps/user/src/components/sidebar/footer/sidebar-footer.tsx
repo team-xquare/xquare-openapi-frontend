@@ -1,4 +1,5 @@
 import { usePathname, useRouter } from "next/navigation";
+import { api } from "@/lib/api";
 import {
   SidebarFooterContainer,
   SidebarFooterName,
@@ -24,7 +25,8 @@ export function SidebarFooter() {
         <SidebarLogoutButton
           type="button"
           onClick={() => {
-            // 로그인 API 연동 전에는 로그인 화면으로 이동합니다.
+            // 서버에 로그아웃 API가 없어서 저장한 토큰을 지우고 로그인 화면으로 이동
+            api.auth.logout();
             router.replace("/login");
           }}
         >

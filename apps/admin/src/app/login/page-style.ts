@@ -55,6 +55,13 @@ export const LoginButton = styled(PrimaryButton)`
   width: 100%;
 `;
 
+export const LoginError = styled.p`
+  color: ${Xquare_colors.red[500]};
+  font-size: 13px;
+  line-height: normal;
+  margin: 0;
+`;
+
 export const LoginNote = styled.div`
   color: ${Xquare_colors.slate[600]};
   font-size: 13px;

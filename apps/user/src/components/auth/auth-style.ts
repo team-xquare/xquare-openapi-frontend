@@ -145,3 +145,16 @@ export const PasswordHelpLink = styled(Link)`
   text-align: right;
   width: 300px;
 `;
+
+// 화면에는 안 보이고 스크린 리더만 바로 읽어주는 안내 (로그인 실패 등)
+export const AuthLiveMessage = styled.p`
+  border: 0;
+  clip-path: inset(50%);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+`;

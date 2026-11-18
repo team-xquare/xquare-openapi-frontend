@@ -2,9 +2,12 @@
 
 import { useId, useLayoutEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { ApiError } from "@xquare/api";
+import { api } from "@/lib/api";
 import { AuthLayout } from "../../components/auth-layout/auth-layout";
 import {
   LoginButton,
+  LoginError,
   LoginField,
   LoginForm,
   LoginInput,
@@ -18,6 +21,8 @@ export default function AdminLoginPage() {
   const id = useId();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   // 다른 페이지로 이동해도 화면이 숨겨진 채 상태가 남으므로,
   // 다시 들어오면 빈 폼이 되도록 숨겨질 때 입력값을 비움
@@ -25,17 +30,31 @@ export default function AdminLoginPage() {
     return () => {
       setUsername("");
       setPassword("");
+      setError("");
     };
   }, []);
 
-  const canSubmit = username.trim() !== "" && password !== "";
+  const canSubmit = username.trim() !== "" && password !== "" && !submitting;
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canSubmit) return;
 
-    // 로그인 API 연동 전이라 입력만 확인하고 홈으로 이동
-    router.push("/");
+    setSubmitting(true);
+    setError("");
+    try {
+      // ADMIN 권한 확인과 권한 없음(403) 이동은 OPN-78에서 붙임
+      await api.auth.login({ username: username.trim(), password });
+      router.push("/");
+    } catch (loginError) {
+      setError(
+        loginError instanceof ApiError
+          ? loginError.message
+          : "로그인하지 못했습니다. 잠시 후 다시 시도해주세요.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -55,7 +74,10 @@ export default function AdminLoginPage() {
             placeholder="아이디를 입력하세요"
             autoComplete="username"
             required
-            onChange={(event) => setUsername(event.target.value)}
+            onChange={(event) => {
+              setUsername(event.target.value);
+              setError("");
+            }}
           />
         </LoginField>
 
@@ -68,12 +90,23 @@ export default function AdminLoginPage() {
             placeholder="비밀번호를 입력하세요"
             autoComplete="current-password"
             required
-            onChange={(event) => setPassword(event.target.value)}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? `${id}-error` : undefined}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              setError("");
+            }}
           />
         </LoginField>
 
+        {error && (
+          <LoginError id={`${id}-error`} role="alert">
+            {error}
+          </LoginError>
+        )}
+
         <LoginButton type="submit" disabled={!canSubmit}>
-          로그인
+          {submitting ? "로그인 중..." : "로그인"}
         </LoginButton>
 
         <LoginNote id={`${id}-note`}>
