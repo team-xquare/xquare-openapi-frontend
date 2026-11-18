@@ -721,3 +721,65 @@ test("취소 사유가 400 · 401 ApiError여도 재발급 거절로 보고 로�
   await sleep(40);
   assert.deepEqual(current(), NEW);
 });
+
+test("다른 탭이 다른 계정으로 로그인하고 이 탭이 그 토큰을 재발급해도, 이전 계정 요청은 새 계정으로 보내지 않음", async () => {
+  const { storage } = memoryStorage(USER1_OLD);
+  const USER2_NEW: AuthTokens = { accessToken: fakeJwt("2", "new"), refreshToken: "refresh-2-new" };
+  const { fetchFn, calls } = fakeFetch(async (call) => {
+    if (call.path === "/students/1") {
+      if (call.authorization === `Bearer ${USER1_OLD.accessToken}`) {
+        await sleep(30);
+        return json(401, { code: "INVALID_TOKEN", message: "만료" });
+      }
+      return json(200, { leaked: true });
+    }
+    if (call.path === "/auth/reissue") return json(200, USER2_NEW);
+    if (call.authorization === `Bearer ${USER2_NEW.accessToken}`) return json(200, { path: call.path });
+    return json(401, { code: "INVALID_TOKEN", message: "만료" });
+  });
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  // 1. 1번 사용자의 요청이 응답을 기다림
+  const oldRequest = api.patch("/students/1", { name: "1번 사용자가 보낸 수정" });
+  await sleep(5);
+  // 2. 다른 탭에서 2번 사용자로 로그인
+  storage.set(USER2);
+  // 3. 이 탭이 2번 사용자의 토큰을 재발급
+  assert.deepEqual(await api.get("/teachers"), { path: "/teachers" });
+  // 4. 1번 사용자의 요청이 401을 받아도 2번 사용자 토큰으로 다시 보내지 않음
+  await assert.rejects(oldRequest, ApiError);
+  assert.equal(
+    calls.some((call) => call.path === "/students/1" && call.authorization !== `Bearer ${USER1_OLD.accessToken}`),
+    false,
+  );
+});
+
+test("이 탭에서 두 번 이어서 재발급해도 같은 로그인의 요청은 다시 보냄", async () => {
+  const { storage } = memoryStorage(OLD);
+  const NEWER: AuthTokens = { accessToken: "access-newer", refreshToken: "refresh-newer" };
+  const { fetchFn } = fakeFetch(async (call) => {
+    if (call.path === "/auth/reissue") {
+      const { refreshToken } = call.body as { refreshToken: string };
+      return json(200, refreshToken === OLD.refreshToken ? NEW : NEWER);
+    }
+    if (call.path === "/slow" && call.authorization === `Bearer ${OLD.accessToken}`) {
+      await sleep(20);
+      return json(401, { code: "INVALID_TOKEN", message: "만료" });
+    }
+    // NEW는 /students에서 한 번 쓰인 뒤 만료돼서 /teachers에서 다시 재발급됨
+    if (call.path === "/students" && call.authorization === `Bearer ${NEW.accessToken}`) {
+      return json(200, { ok: true });
+    }
+    if (call.authorization === `Bearer ${NEWER.accessToken}`) return json(200, { ok: true });
+    return json(401, { code: "INVALID_TOKEN", message: "만료" });
+  });
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  const slow = api.get("/slow");
+  await sleep(5);
+  await api.get("/students"); // OLD → NEW
+  await api.get("/teachers"); // NEW → NEWER
+
+  assert.deepEqual(storage.get(), NEWER);
+  assert.deepEqual(await slow, { ok: true });
+});
