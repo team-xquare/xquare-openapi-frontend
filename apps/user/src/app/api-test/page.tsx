@@ -239,6 +239,7 @@ export default function ApiTestPage() {
               </Field>
               <FieldHint>
                 입력한 키는 이 요청의 헤더로만 보내고 저장하지 않습니다.
+                활용신청한 분야의 API만 호출할 수 있습니다.
               </FieldHint>
             </CardBody>
           </Card>
