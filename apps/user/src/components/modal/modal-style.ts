@@ -30,13 +30,14 @@ export const ModalTitle = styled.h2`
   margin: 0 0 12px;
 `;
 
-export const ModalDescription = styled.p<{ align: "left" | "center" }>`
+// align을 안 주면 모달 정렬을 그대로 따름 (문의하기 모달)
+export const ModalDescription = styled.p<{ align?: "left" | "center" }>`
   color: ${Xquare_colors.gray[600]};
   font-size: 14px;
   font-weight: 400;
   line-height: 1.3;
   margin: 0;
-  text-align: ${(props) => props.align};
+  text-align: ${(props) => props.align ?? "inherit"};
   word-break: keep-all;
 `;
 

@@ -4,6 +4,7 @@ export {
   AuthFormCard,
   AuthInputs,
   AuthLink,
+  AuthLiveMessage,
   AuthLinkButton,
   AuthLinkRow,
   AuthTitle,

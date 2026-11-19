@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   reactCompiler: true,
+  // packages/api는 TypeScript 소스 그대로라 앱 빌드에서 같이 변환
+  transpilePackages: ["@xquare/api"],
 };
 
 export default function config(phase: string): NextConfig {
