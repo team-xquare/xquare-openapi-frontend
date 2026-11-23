@@ -32,14 +32,16 @@ export const AUTH_INFO: InfoListItem[] = [
       "API 활용 신청 시 발급됩니다. 개발계정은 자동승인되어 바로 발급됩니다.",
   },
   { label: "요청 헤더", value: "X-API-KEY: {apiKey}", isCode: true },
+  { label: "유효기간", value: "발급일부터 60일" },
   {
-    label: "키 보관",
-    value: "발급 직후에만 키 전체가 표시됩니다. 분실하면 재발급해야 합니다.",
+    label: "키 갱신",
+    value:
+      "마이페이지 → 키 갱신 (이메일 인증 한 번으로 모든 프로젝트 키의 만료일을 오늘부터 60일로 · 키 값은 그대로)",
   },
   {
-    label: "호출 한도",
+    label: "키 보관",
     value:
-      "개발계정은 하루 10,000회까지 호출할 수 있습니다. (RATE_LIMIT_EXCEEDED)",
+      "서버에서만 쓰세요. 프론트엔드(브라우저) 코드에 넣으면 누구나 키를 볼 수 있습니다.",
   },
 ];
 
@@ -101,35 +103,37 @@ export const ERROR_CODE_ROWS = [
   {
     code: "INVALID_API_KEY",
     status: "401",
-    description: "API 키가 없거나 유효하지 않습니다.",
-  },
-  {
-    code: "API_ACCESS_DENIED",
-    status: "403",
-    description: "활용 신청하지 않은 API를 호출했습니다.",
-  },
-  {
-    code: "RATE_LIMIT_EXCEEDED",
-    status: "429",
     description:
-      "하루 호출 한도를 넘었습니다. 다음 날 다시 호출할 수 있습니다.",
+      "API 키가 없거나 유효하지 않습니다. 재발급한 경우 새 키로 바꾸고, 만료된 경우 마이페이지에서 갱신해 주세요.",
+  },
+  {
+    code: "FORBIDDEN",
+    status: "403",
+    description:
+      "활용신청하지 않았거나 아직 승인되지 않은 분야의 API를 호출했습니다. 마이페이지에서 프로젝트의 신청 상태를 확인하세요.",
+  },
+  {
+    code: "*_NOT_FOUND",
+    status: "404",
+    description: "요청한 데이터가 없습니다. 예: STUDENT_NOT_FOUND",
   },
 ];
 
 export const ACCESS_LEVELS: InfoListItem[] = [
   {
-    label: "개발계정",
+    label: "USER",
     value:
-      "활용 신청 즉시 자동승인됩니다. 하루 10,000회까지 호출할 수 있습니다.",
+      "활용신청해 승인된 분야의 조회 API를 프로젝트의 API 키로 호출합니다. 교내 분야는 신청하면 바로, 제한 분야(학생 · 교직원 · 자습 감독처럼 개인정보가 들어간 데이터)는 관리자 승인 후 쓸 수 있습니다.",
   },
   {
-    label: "운영계정",
-    value: "활용사례를 등록하고 신청하면 호출 한도를 늘릴 수 있습니다.",
+    label: "ADMIN",
+    value:
+      "데이터 관리자 화면에서만 씁니다. 등록, 수정, 삭제 계열이 여기에 속하며 API 키로는 호출할 수 없습니다.",
   },
   {
-    label: "미신청 API",
+    label: "ALL",
     value:
-      "활용 신청하지 않은 API를 호출하면 403(API_ACCESS_DENIED)을 반환합니다.",
+      "키 없이 호출할 수 있는 공개 API입니다. 급식 조회 등이 여기에 속합니다.",
   },
 ];
 
@@ -147,7 +151,7 @@ export const GETTING_STARTED_STEPS: StepCard[] = [
   {
     title: "헤더에 API 키 실어 호출",
     description:
-      "X-API-KEY: {apiKey} 헤더를 붙여 호출합니다. 개발계정은 하루 10,000회까지 호출할 수 있습니다.",
+      "X-API-KEY: {apiKey} 헤더를 붙여 서버에서 호출합니다. 키는 60일마다 마이페이지에서 갱신하고(키 값은 그대로), 잃어버리면 이메일 인증 후 재발급합니다. 재발급해도 신청한 분야는 그대로입니다.",
   },
 ];
 
