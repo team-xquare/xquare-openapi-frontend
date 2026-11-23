@@ -4,11 +4,14 @@ import { Xquare_colors } from "../../styles/colors";
 
 const FOCUS_COLOR = Xquare_colors.purple[400];
 
+// 입력칸과 같은 폭으로 고정해서, 아래 문구가 길어도 입력칸이 옆으로 밀리지 않고 줄이 바뀜
 export const InputWrapper = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
   margin-top: 0.5rem;
+  max-width: 100%;
+  width: 300px;
 `;
 
 // 포커스되면 밑줄, 글자, placeholder를 보라색으로 표시
@@ -54,8 +57,9 @@ export const InputField = styled.input`
 export const InputTitleBox = styled.div`
   align-items: center;
   display: flex;
-  height: 1rem;
   justify-content: flex-end;
+  min-height: 1rem;
+  text-align: right;
 `;
 
 // Medium(500) 굵기는 인증 화면 폰트에만 있어 먼저 사용하고, 없으면 기본 Pretendard로 표시
