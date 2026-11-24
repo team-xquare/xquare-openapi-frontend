@@ -1,5 +1,8 @@
 "use client";
 
+// 급식 삭제 API가 아직 없어 지금은 쓰지 않음. 삭제 API가 생기면 목록 · 수정 화면의
+// 삭제 버튼과 함께 다시 붙임 (요청 · 실패 처리는 공지 삭제 모달을 따름)
+
 import { useEffect, useId, useRef } from "react";
 import {
   ModalActions,

@@ -4,6 +4,7 @@ import { Xquare_colors } from "../../styles/colors";
 import {
   ContentTextarea,
   FormActions,
+  SecondaryButton,
   TitleInput,
 } from "../notice/page-style";
 
@@ -236,3 +237,6 @@ export const ErrorText = styled.p`
 export const MealFormActions = styled(FormActions)`
   padding-top: 30px;
 `;
+
+// 수정 화면에서 그 날짜에 급식이 없을 때의 `급식 입력`. 보조 버튼과 같은 모양의 링크
+export const SecondaryLink = SecondaryButton.withComponent(Link);
