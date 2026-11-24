@@ -48,6 +48,8 @@ export function NoticeDetail({ id }: { id: string }) {
       fetchNoticePage(0, NEIGHBOR_LOOKUP_SIZE, request.signal).catch(() => null),
     ])
       .then(([notice, list]) => {
+        // 화면 상태가 남아 있어서, 전에 실패했다가(로그인 전 401 등) 다시 받으면 오류 화면을 지움
+        setErrorStatus(null);
         const notices = list?.notices ?? [];
         const index = notices.findIndex((item) => item.id === notice.id);
         // 목록이 최신순이라 이전글은 바로 뒤, 다음글은 바로 앞 항목

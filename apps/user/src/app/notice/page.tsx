@@ -46,6 +46,8 @@ export default function NoticePage() {
     const request = new AbortController();
     fetchNoticePage(page, PAGE_SIZE, request.signal)
       .then((loaded) => {
+        // 화면 상태가 남아 있어서, 전에 실패했다가(로그인 전 401 등) 다시 받으면 오류 화면을 지움
+        setErrorStatus(null);
         // 그 사이 공지가 지워져 지금 페이지가 비면 마지막 페이지로 옮김
         if (loaded.notices.length === 0 && page > 0 && loaded.totalPage > 0) {
           setPage(loaded.totalPage - 1);
