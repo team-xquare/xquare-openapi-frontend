@@ -876,3 +876,107 @@ test("재시도할 때 ArrayBuffer 본문은 처음 보낸 바이트를 그대�
 
   assert.deepEqual(sentBytes, [1, 1]);
 });
+
+test("인증코드 발송은 토큰 없이 이메일만 보냄", async () => {
+  const { storage } = memoryStorage(OLD);
+  const { fetchFn, calls } = fakeFetch(() => json(200, { message: "인증코드를 발송했습니다." }));
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  await api.auth.sendEmailOtp({ email: "tester@dsm.hs.kr" });
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].path, "/auth/email/otp");
+  assert.equal(calls[0].method, "POST");
+  assert.equal(calls[0].authorization, null);
+  assert.deepEqual(calls[0].body, { email: "tester@dsm.hs.kr" });
+});
+
+test("인증코드 발송이 429면 서버 코드 그대로 던짐", async () => {
+  const { storage } = memoryStorage();
+  const { fetchFn } = fakeFetch(() =>
+    json(429, { code: "OTP_RESEND_TOO_SOON", message: "인증코드를 너무 자주 요청했습니다." }),
+  );
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  await assert.rejects(
+    api.auth.sendEmailOtp({ email: "tester@dsm.hs.kr" }),
+    (error: unknown) =>
+      error instanceof ApiError && error.status === 429 && error.code === "OTP_RESEND_TOO_SOON",
+  );
+});
+
+test("인증코드 검증은 토큰 없이 보내고 emailVerifiedToken을 돌려줌", async () => {
+  const { storage } = memoryStorage(OLD);
+  const { fetchFn, calls } = fakeFetch(() => json(200, { emailVerifiedToken: "verified-1" }));
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  const token = await api.auth.verifyEmailOtp({ email: "tester@dsm.hs.kr", otp: "123456" });
+
+  assert.equal(token, "verified-1");
+  assert.equal(calls[0].path, "/auth/email/otp/verify");
+  assert.equal(calls[0].authorization, null);
+  assert.deepEqual(calls[0].body, { email: "tester@dsm.hs.kr", otp: "123456" });
+});
+
+test("인증코드 검증 응답에 토큰이 없으면 에러", async () => {
+  const { storage } = memoryStorage();
+  const { fetchFn } = fakeFetch(() => json(200, { message: "ok" }));
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  await assert.rejects(
+    api.auth.verifyEmailOtp({ email: "tester@dsm.hs.kr", otp: "123456" }),
+    (error: unknown) => error instanceof ApiError && error.code === "INVALID_RESPONSE",
+  );
+});
+
+const SIGNUP_BODY = {
+  username: "tester",
+  password: "Password1!",
+  studentNumber: 2315,
+  name: "장윤호",
+  email: "tester@dsm.hs.kr",
+  emailVerifiedToken: "verified-1",
+};
+
+test("회원가입은 토큰 없이 보내고, 성공하면 로그인처럼 받은 토큰을 저장함", async () => {
+  const { storage, current } = memoryStorage();
+  const { fetchFn, calls } = fakeFetch(() => json(201, NEW));
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  await api.auth.signup(SIGNUP_BODY);
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].path, "/auth/signup");
+  assert.equal(calls[0].method, "POST");
+  assert.equal(calls[0].authorization, null);
+  assert.deepEqual(calls[0].body, SIGNUP_BODY);
+  assert.deepEqual(current(), NEW);
+  assert.equal(api.auth.isLoggedIn(), true);
+});
+
+test("회원가입이 409면 서버 코드 그대로 던지고 토큰을 저장하지 않음", async () => {
+  const { storage, current } = memoryStorage();
+  const { fetchFn } = fakeFetch(() =>
+    json(409, { code: "USERNAME_ALREADY_EXISTS", message: "이미 사용 중인 아이디입니다." }),
+  );
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  await assert.rejects(
+    api.auth.signup(SIGNUP_BODY),
+    (error: unknown) =>
+      error instanceof ApiError && error.status === 409 && error.code === "USERNAME_ALREADY_EXISTS",
+  );
+  assert.equal(current(), null);
+});
+
+test("회원가입 응답에 토큰이 없으면 저장하지 않고 에러", async () => {
+  const { storage, current } = memoryStorage();
+  const { fetchFn } = fakeFetch(() => json(201, { message: "ok" }));
+  const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
+
+  await assert.rejects(
+    api.auth.signup(SIGNUP_BODY),
+    (error: unknown) => error instanceof ApiError && error.code === "INVALID_RESPONSE",
+  );
+  assert.equal(current(), null);
+});

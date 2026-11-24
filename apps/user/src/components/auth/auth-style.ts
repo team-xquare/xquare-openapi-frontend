@@ -133,6 +133,12 @@ export const AuthLinkButton = styled.button`
   font-size: 12px;
   line-height: normal;
   padding: 0;
+
+  /* 요청을 보내는 동안 누를 수 없게 함 */
+  &:disabled {
+    color: ${Xquare_colors.gray[500]};
+    cursor: default;
+  }
 `;
 
 // 비밀번호 입력칸 오른쪽 아래의 비밀번호 찾기 링크

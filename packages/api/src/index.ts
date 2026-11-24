@@ -9,6 +9,16 @@ export interface AuthTokens {
   refreshToken: string;
 }
 
+export interface SignupBody {
+  username: string;
+  password: string;
+  studentNumber: number;
+  name: string;
+  email: string;
+  // 인증코드 검증(auth.verifyEmailOtp)으로 받은 토큰
+  emailVerifiedToken: string;
+}
+
 export interface TokenStorage {
   get(): AuthTokens | null;
   set(tokens: AuthTokens): void;
@@ -435,28 +445,73 @@ export function createApiClient(options: ApiClientOptions) {
     return parse<T>(response);
   }
 
+  // 로그인 · 회원가입 응답으로 받은 토큰을 저장하고 새 로그인으로 시작함
+  async function startSession(
+    path: string,
+    body: unknown,
+    signal?: AbortSignal,
+  ): Promise<AuthTokens> {
+    const tokens = await request<unknown>(path, {
+      method: "POST",
+      body,
+      auth: false,
+      signal,
+    });
+    if (!isAuthTokens(tokens)) throw invalidResponse(200);
+    // 응답이 온 뒤에 취소됐으면(화면을 떠남) 토큰을 저장하지 않음
+    if (signal?.aborted) throw abortReason(signal);
+    try {
+      options.storage.set(tokens);
+    } catch {
+      throw new ApiError(0, STORAGE_ERROR, STORAGE_ERROR_MESSAGE);
+    }
+    session += 1;
+    rotatedFrom.clear();
+    return tokens;
+  }
+
   const auth = {
-    async login(
+    login(
       body: { username: string; password: string },
       init?: { signal?: AbortSignal },
     ) {
-      const tokens = await request<unknown>("/auth/login", {
+      return startSession("/auth/login", body, init?.signal);
+    },
+    // 가입하면 서버가 바로 토큰을 줘서 로그인한 상태가 됨
+    signup(body: SignupBody, init?: { signal?: AbortSignal }) {
+      return startSession("/auth/signup", body, init?.signal);
+    },
+    // 회원가입 · 비밀번호 찾기에 쓰는 이메일 인증코드 발송. 너무 자주 보내면 429
+    async sendEmailOtp(
+      body: { email: string },
+      init?: { signal?: AbortSignal },
+    ) {
+      await request<unknown>("/auth/email/otp", {
         method: "POST",
         body,
         auth: false,
         signal: init?.signal,
       });
-      if (!isAuthTokens(tokens)) throw invalidResponse(200);
-      // 응답이 온 뒤에 취소됐으면(로그인 화면을 떠남) 토큰을 저장하지 않음
-      if (init?.signal?.aborted) throw abortReason(init.signal);
-      try {
-        options.storage.set(tokens);
-      } catch {
-        throw new ApiError(0, STORAGE_ERROR, STORAGE_ERROR_MESSAGE);
+    },
+    // 인증코드가 맞으면 emailVerifiedToken을 돌려줌. 서버에서 10분 동안 유효
+    async verifyEmailOtp(
+      body: { email: string; otp: string },
+      init?: { signal?: AbortSignal },
+    ) {
+      const data = await request<unknown>("/auth/email/otp/verify", {
+        method: "POST",
+        body,
+        auth: false,
+        signal: init?.signal,
+      });
+      const token =
+        typeof data === "object" && data !== null
+          ? (data as Record<string, unknown>).emailVerifiedToken
+          : undefined;
+      if (typeof token !== "string" || token === "") {
+        throw invalidResponse(200);
       }
-      session += 1;
-      rotatedFrom.clear();
-      return tokens;
+      return token;
     },
     // 서버에 로그아웃 API가 없어서 저장한 토큰만 지움
     logout() {
