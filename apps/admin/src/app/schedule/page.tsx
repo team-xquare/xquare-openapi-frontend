@@ -1,12 +1,30 @@
 "use client";
 
-import { useId, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import {
-  SCHEDULE_BASE_MONTH,
-  SCHEDULE_BASE_YEAR,
-  SCHEDULES,
-  SUPERVISIONS,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
+import { useRouter } from "next/navigation";
+import { CellStatus } from "@/components/request-status/request-status-style";
+import { api } from "@/lib/api";
+import { errorMessage, isAbortError } from "@/lib/api-error";
+import { fetchSchedules } from "@/lib/schedules-api";
+import { fetchSupervisions } from "@/lib/study-supervisors-api";
+import { useToday } from "@/lib/use-today";
+import {
+  getMonthRange,
+  isSchoolSchedule,
+  monthOf,
+  toMonthKey,
+  toSchedule,
+  toSupervisions,
+  type Month,
   type Schedule,
+  type Supervision,
 } from "../schedule-content";
 import {
   EmptyCell,
@@ -41,35 +59,98 @@ import {
 } from "./page-style";
 import { TimetableCard } from "./timetable-card";
 
-const YEARS = [
-  SCHEDULE_BASE_YEAR - 1,
-  SCHEDULE_BASE_YEAR,
-  SCHEDULE_BASE_YEAR + 1,
-];
 const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1);
 
-interface Filter {
-  year: number;
-  month: number;
+// 불러온 달과 함께 둬서, 달을 바꾼 직후 이전 달 목록이 잠깐 보이지 않게 함
+interface Loaded<T> {
+  monthKey: string;
+  items: T;
 }
 
-const INITIAL_FILTER: Filter = {
-  year: SCHEDULE_BASE_YEAR,
-  month: SCHEDULE_BASE_MONTH,
-};
-
-const toMonthPrefix = ({ year, month }: Filter) =>
-  `${year}-${String(month).padStart(2, "0")}`;
+interface LoadError {
+  monthKey: string;
+  message: string;
+}
 
 export default function ScheduleListPage() {
   const id = useId();
-  // API 연동 전이라 삭제는 화면의 더미 목록에서만 빠짐
-  const [schedules, setSchedules] = useState(SCHEDULES);
-  // 고르는 중인 값과 조회 버튼을 눌러 적용된 값을 따로 둠
-  const [draft, setDraft] = useState(INITIAL_FILTER);
-  const [filter, setFilter] = useState(INITIAL_FILTER);
+  const router = useRouter();
+  const today = useToday();
+  // 조회 버튼을 눌러 고른 달. 고르기 전에는 오늘이 있는 달을 보여 줌
+  const [picked, setPicked] = useState<Month | null>(null);
+  // 고르는 중인 값. 조회 버튼을 눌러야 적용됨
+  const [draft, setDraft] = useState<Month | null>(null);
+  const [schedules, setSchedules] = useState<Loaded<Schedule[]> | null>(null);
+  const [scheduleError, setScheduleError] = useState<LoadError | null>(null);
+  const [supervisions, setSupervisions] = useState<Loaded<
+    Supervision[]
+  > | null>(null);
+  const [supervisionError, setSupervisionError] = useState<LoadError | null>(
+    null,
+  );
+  // 바뀌면 그 표를 다시 불러옴 (다시 시도 · 삭제 후)
+  const [scheduleReloadKey, setScheduleReloadKey] = useState(0);
+  const [supervisionReloadKey, setSupervisionReloadKey] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<Schedule | null>(null);
   const yearSelectRef = useRef<HTMLSelectElement>(null);
+
+  // 오늘은 브라우저에서만 알 수 있어서 미리 그릴 때는 조회할 달이 없음
+  const filter = picked ?? (today ? monthOf(today) : null);
+  const shown = draft ?? filter;
+  const monthKey = filter ? toMonthKey(filter) : null;
+  const years = filter ? [filter.year - 1, filter.year, filter.year + 1] : [];
+
+  // 다른 화면에서 돌아와 다시 보일 때도 effect가 다시 돌아 최신 목록을 받음
+  useEffect(() => {
+    if (!monthKey) return;
+    // 로그인 여부는 저장소를 읽어야 해서 렌더 중이 아니라 effect에서 확인
+    if (!api.auth.isLoggedIn()) {
+      router.replace("/login");
+      return;
+    }
+    const request = new AbortController();
+    fetchSchedules(getMonthRange(monthOf(monthKey)), request.signal)
+      .then((list) => {
+        setSchedules({
+          monthKey,
+          items: list
+            .filter(isSchoolSchedule)
+            .map(toSchedule)
+            .sort((a, b) => a.date.localeCompare(b.date)),
+        });
+        setScheduleError(null);
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error) || request.signal.aborted) return;
+        setScheduleError({
+          monthKey,
+          message: errorMessage(error, "학사 일정을 불러오지 못했습니다."),
+        });
+      });
+    return () => request.abort();
+  }, [monthKey, router, scheduleReloadKey]);
+
+  useEffect(() => {
+    // 로그인하지 않았으면 위 effect가 로그인 화면으로 보냄
+    if (!monthKey || !api.auth.isLoggedIn()) return;
+    const request = new AbortController();
+    fetchSupervisions(getMonthRange(monthOf(monthKey)), request.signal)
+      .then((response) => {
+        setSupervisions({
+          monthKey,
+          items: toSupervisions(response.supervisions),
+        });
+        setSupervisionError(null);
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error) || request.signal.aborted) return;
+        setSupervisionError({
+          monthKey,
+          message: errorMessage(error, "자습 감독을 불러오지 못했습니다."),
+        });
+      });
+    return () => request.abort();
+  }, [monthKey, supervisionReloadKey]);
 
   // 다른 페이지로 이동해도 화면이 숨겨진 채 상태가 남으므로,
   // 열려 있던 삭제 모달이 돌아왔을 때 배경 없이 남지 않도록 숨겨질 때 닫음
@@ -77,17 +158,19 @@ export default function ScheduleListPage() {
     return () => setDeleteTarget(null);
   }, []);
 
-  const monthPrefix = toMonthPrefix(filter);
-  const scheduleRows = schedules
-    .filter((schedule) => schedule.date.startsWith(monthPrefix))
-    .sort((a, b) => a.date.localeCompare(b.date));
-  const supervisionRows = SUPERVISIONS.filter((supervision) =>
-    supervision.date.startsWith(monthPrefix),
-  );
+  // 지금 고른 달의 결과만 씀
+  const scheduleRows =
+    schedules?.monthKey === monthKey ? schedules.items : null;
+  const scheduleLoadError =
+    scheduleError?.monthKey === monthKey ? scheduleError.message : "";
+  const supervisionRows =
+    supervisions?.monthKey === monthKey ? supervisions.items : null;
+  const supervisionLoadError =
+    supervisionError?.monthKey === monthKey ? supervisionError.message : "";
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setFilter(draft);
+    if (shown) setPicked(shown);
   };
 
   return (
@@ -111,12 +194,13 @@ export default function ScheduleListPage() {
           <Select
             ref={yearSelectRef}
             aria-label="연도"
-            value={draft.year}
+            value={shown?.year ?? ""}
+            disabled={!shown}
             onChange={(event) =>
-              setDraft({ ...draft, year: Number(event.target.value) })
+              shown && setDraft({ ...shown, year: Number(event.target.value) })
             }
           >
-            {YEARS.map((year) => (
+            {years.map((year) => (
               <option key={year} value={year}>
                 {year}년
               </option>
@@ -126,9 +210,10 @@ export default function ScheduleListPage() {
         <SelectBox width={120}>
           <Select
             aria-label="월"
-            value={draft.month}
+            value={shown?.month ?? ""}
+            disabled={!shown}
             onChange={(event) =>
-              setDraft({ ...draft, month: Number(event.target.value) })
+              shown && setDraft({ ...shown, month: Number(event.target.value) })
             }
           >
             {MONTHS.map((month) => (
@@ -138,7 +223,9 @@ export default function ScheduleListPage() {
             ))}
           </Select>
         </SelectBox>
-        <SecondaryButton type="submit">조회</SecondaryButton>
+        <SecondaryButton type="submit" disabled={!shown}>
+          조회
+        </SecondaryButton>
       </FilterBar>
 
       <FilterHint>등록한 일정은 이 화면에서 수정·삭제할 수 있습니다.</FilterHint>
@@ -164,7 +251,7 @@ export default function ScheduleListPage() {
               </tr>
             </thead>
             <tbody>
-              {scheduleRows.map((schedule) => (
+              {scheduleRows?.map((schedule) => (
                 <tr key={schedule.id}>
                   <td>{schedule.date}</td>
                   <td title={schedule.title}>{schedule.title}</td>
@@ -188,10 +275,27 @@ export default function ScheduleListPage() {
                   </td>
                 </tr>
               ))}
-              {scheduleRows.length === 0 && (
+              {(scheduleRows === null || scheduleRows.length === 0) && (
                 <tr>
                   <EmptyCell colSpan={4}>
-                    {filter.month}월에 등록된 학사 일정이 없습니다.
+                    {scheduleLoadError ? (
+                      <CellStatus role="alert">
+                        {scheduleLoadError}
+                        <SecondaryButton
+                          type="button"
+                          onClick={() => {
+                            setScheduleError(null);
+                            setScheduleReloadKey((key) => key + 1);
+                          }}
+                        >
+                          다시 시도
+                        </SecondaryButton>
+                      </CellStatus>
+                    ) : scheduleRows === null ? (
+                      "학사 일정을 불러오는 중입니다."
+                    ) : (
+                      `${filter?.month}월에 등록된 학사 일정이 없습니다.`
+                    )}
                   </EmptyCell>
                 </tr>
               )}
@@ -218,7 +322,7 @@ export default function ScheduleListPage() {
               </tr>
             </thead>
             <tbody>
-              {supervisionRows.map((supervision) => (
+              {supervisionRows?.map((supervision) => (
                 <tr key={supervision.date}>
                   <td>{supervision.date}</td>
                   {[supervision.floor2, supervision.floor3, supervision.floor4].map(
@@ -230,10 +334,27 @@ export default function ScheduleListPage() {
                   )}
                 </tr>
               ))}
-              {supervisionRows.length === 0 && (
+              {(supervisionRows === null || supervisionRows.length === 0) && (
                 <tr>
                   <EmptyCell colSpan={4}>
-                    {filter.month}월에 배정된 자습 감독이 없습니다.
+                    {supervisionLoadError ? (
+                      <CellStatus role="alert">
+                        {supervisionLoadError}
+                        <SecondaryButton
+                          type="button"
+                          onClick={() => {
+                            setSupervisionError(null);
+                            setSupervisionReloadKey((key) => key + 1);
+                          }}
+                        >
+                          다시 시도
+                        </SecondaryButton>
+                      </CellStatus>
+                    ) : supervisionRows === null ? (
+                      "자습 감독을 불러오는 중입니다."
+                    ) : (
+                      `${filter?.month}월에 배정된 자습 감독이 없습니다.`
+                    )}
                   </EmptyCell>
                 </tr>
               )}
@@ -246,12 +367,20 @@ export default function ScheduleListPage() {
 
       {deleteTarget && (
         <DeleteScheduleModal
-          title={deleteTarget.title}
+          schedule={deleteTarget}
           onClose={() => setDeleteTarget(null)}
-          onConfirm={() => {
-            setSchedules((prev) =>
-              prev.filter((schedule) => schedule.id !== deleteTarget.id),
+          onDeleted={() => {
+            // 지운 행은 바로 빼고, 그 사이 바뀐 내용까지 맞추도록 목록을 다시 받음
+            setSchedules(
+              (prev) =>
+                prev && {
+                  ...prev,
+                  items: prev.items.filter(
+                    (schedule) => schedule.id !== deleteTarget.id,
+                  ),
+                },
             );
+            setScheduleReloadKey((key) => key + 1);
             // 지운 행의 삭제 버튼이 사라져 포커스가 갈 곳이 없으므로 조회 조건으로 옮김
             yearSelectRef.current?.focus();
           }}
