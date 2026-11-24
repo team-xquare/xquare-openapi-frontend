@@ -91,9 +91,9 @@ export default function UsageLogPage() {
       <PageHead>
         <PageTitle>사용 기록</PageTitle>
         <PageDescription>
-          API를 호출할 때마다 기록이 남습니다. 어느 프로젝트의 키로 어떤 API를 언제
-          불렀고 응답이 어땠는지 볼 수 있습니다. 키가 새거나 이상한 호출이 보이면
-          신청자에게 재발급을 안내하세요.
+          API를 호출할 때마다 기록이 남습니다. 어느 프로젝트의 키로 어떤 API를
+          언제 불렀고 응답이 어땠는지 볼 수 있습니다. 키가 새거나 이상한 호출이
+          보이면 신청자에게 재발급을 안내하세요.
         </PageDescription>
       </PageHead>
 
@@ -173,7 +173,12 @@ export default function UsageLogPage() {
               <td title={log.project}>{log.project}</td>
               <td>
                 {/* 상세 화면이 아직 없어 누를 수 없게 막아 둡니다. */}
-                <DetailButton type="button" disabled title="준비 중입니다">
+                <DetailButton
+                  type="button"
+                  disabled
+                  aria-label="상세"
+                  title="준비 중입니다"
+                >
                   상세
                 </DetailButton>
               </td>

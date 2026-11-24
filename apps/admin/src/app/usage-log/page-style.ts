@@ -57,14 +57,15 @@ export const PageDescription = styled.p`
 export const FilterBar = styled.form`
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 20px;
 `;
 
 export const SearchInput = styled.input`
   ${CONTROL}
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 240px;
+  min-width: 240px;
   padding: 0 16px;
 
   &::placeholder {
@@ -105,28 +106,29 @@ export const UsageTable = styled.table`
     font-size: 14px;
     font-weight: 700;
     height: 56px;
-    padding: 0 20px;
+    padding: 0 12px;
     text-align: left;
   }
 
-  /* 시안 열 너비 250/100/190/110/200/400/82 비율 */
+  /* 본문 884px(1280px 화면)에서 시각·응답·분야·신청자·상세가 잘리지 않게 나눈 비율.
+     호출한 API와 프로젝트 · 키 열만 길면 말줄임으로 줄입니다. */
   th:nth-of-type(1) {
-    width: 20%;
+    width: 17%;
   }
   th:nth-of-type(2) {
-    width: 8%;
+    width: 11%;
   }
   th:nth-of-type(3) {
-    width: 15%;
+    width: 18%;
   }
   th:nth-of-type(4) {
     width: 9%;
   }
   th:nth-of-type(5) {
-    width: 16%;
+    width: 20%;
   }
   th:nth-of-type(6) {
-    width: 25%;
+    width: 18%;
   }
   th:nth-of-type(7) {
     width: 7%;
@@ -138,7 +140,7 @@ export const UsageTable = styled.table`
     font-size: 15px;
     height: 66px;
     overflow: hidden;
-    padding: 0 20px;
+    padding: 0 12px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
