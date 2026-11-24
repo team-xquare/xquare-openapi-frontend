@@ -266,8 +266,8 @@ export function ForgotPasswordForm() {
           { signal },
         );
         if (signal.aborted) return;
-        // 변경만 되고 로그인되지는 않으므로 로그인 화면으로 보냄
-        router.push("/login");
+        // 변경만 되고 로그인되지는 않으므로 안내가 보이게 로그인 화면으로 보냄
+        router.push("/login?reset=done");
         return true;
       },
       (error) => {

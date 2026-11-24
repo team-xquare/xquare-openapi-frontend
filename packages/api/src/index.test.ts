@@ -931,8 +931,9 @@ test("인증코드 검증 응답에 토큰이 없으면 에러", async () => {
 
 const RESET_BODY = { emailVerifiedToken: "verified-1", newPassword: "Password1!" };
 
-test("비밀번호 재설정은 토큰 없이 보내고, 로그인 토큰을 저장하지 않음", async () => {
-  const { storage, current } = memoryStorage();
+test("비밀번호 재설정은 토큰 없이 보내고, 저장된 로그인 토큰을 건드리지 않음", async () => {
+  // 저장된 토큰이 있어야 auth: true로 바뀌었을 때 Authorization이 붙어 테스트가 실패함
+  const { storage, current } = memoryStorage(OLD);
   const { fetchFn, calls } = fakeFetch(() => json(200, { message: "비밀번호를 변경했습니다." }));
   const api = createApiClient({ baseUrl: BASE, storage, fetch: fetchFn });
 
@@ -943,7 +944,7 @@ test("비밀번호 재설정은 토큰 없이 보내고, 로그인 토큰을 저
   assert.equal(calls[0].method, "POST");
   assert.equal(calls[0].authorization, null);
   assert.deepEqual(calls[0].body, RESET_BODY);
-  assert.equal(current(), null);
+  assert.deepEqual(current(), OLD);
 });
 
 test("비밀번호 재설정이 403이면 서버 코드 그대로 던짐", async () => {
