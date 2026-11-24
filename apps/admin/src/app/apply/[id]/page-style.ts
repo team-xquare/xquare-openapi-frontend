@@ -72,7 +72,6 @@ export const BackLink = styled(Link)`
   font-size: 15px;
   padding: 13px 0;
   justify-content: center;
-  margin-top: 34px;
   width: 114px;
 
   &:hover,
@@ -81,4 +80,89 @@ export const BackLink = styled(Link)`
     color: ${Xquare_colors.purple[400]};
     outline: none;
   }
+`;
+
+export const ActionBar = styled.div`
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 34px;
+  max-width: 1080px;
+`;
+
+export const ActionGroup = styled.div`
+  display: flex;
+  gap: 12px;
+`;
+
+const ACTION_BUTTON = `
+  border-radius: 9px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  padding: 13px 0;
+  width: 114px;
+
+  &:focus-visible {
+    outline: 2px solid ${Xquare_colors.purple[400]};
+    outline-offset: 3px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+`;
+
+export const RejectButton = styled.button`
+  ${ACTION_BUTTON}
+  background: ${Xquare_colors.white};
+  border: 1px solid ${Xquare_colors.red[600]};
+  color: ${Xquare_colors.red[600]};
+`;
+
+export const ApproveButton = styled.button`
+  ${ACTION_BUTTON}
+  background: ${Xquare_colors.purple[400]};
+  border: 1px solid ${Xquare_colors.purple[400]};
+  color: ${Xquare_colors.white};
+`;
+
+export const ReasonTextarea = styled.textarea`
+  background: ${Xquare_colors.white};
+  border: ${STRONG_BORDER};
+  border-radius: 8px;
+  color: ${Xquare_colors.slate[900]};
+  font: inherit;
+  font-size: 15px;
+  min-height: 96px;
+  padding: 12px 16px;
+  resize: vertical;
+  width: 100%;
+
+  &::placeholder {
+    color: ${Xquare_colors.slate[400]};
+  }
+
+  &:focus-visible {
+    border-color: ${Xquare_colors.purple[400]};
+    box-shadow: 0 0 0 2px ${Xquare_colors.purple[100]};
+    outline: none;
+  }
+`;
+
+export const TierValue = styled.span<{ $tier: "제한" | "교내" }>`
+  color: ${({ $tier }) =>
+    $tier === "제한" ? Xquare_colors.orange[600] : Xquare_colors.slate[900]};
+`;
+
+export const StatusValue = styled.span<{
+  $status: "승인 대기" | "반려" | "승인 완료";
+}>`
+  color: ${({ $status }) =>
+    $status === "승인 대기"
+      ? Xquare_colors.orange[600]
+      : $status === "반려"
+        ? Xquare_colors.red[600]
+        : Xquare_colors.green[500]};
 `;

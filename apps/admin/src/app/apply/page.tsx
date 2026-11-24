@@ -17,6 +17,8 @@ import {
   Pager,
   SearchButton,
   SearchInput,
+  StatusText,
+  TierText,
   Total,
 } from "./page-style";
 
@@ -24,26 +26,30 @@ const PAGE_SIZE = 5;
 
 export default function ApplyListPage() {
   const [keyword, setKeyword] = useState("");
-  const [apiFilter, setApiFilter] = useState("all");
-  const [accountFilter, setAccountFilter] = useState("all");
+  const [fieldFilter, setFieldFilter] = useState("all");
+  const [kindFilter, setKindFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [tierFilter, setTierFilter] = useState("all");
   const [query, setQuery] = useState({
     keyword: "",
-    api: "all",
-    account: "all",
+    field: "all",
+    kind: "all",
+    status: "all",
+    tier: "all",
   });
   const [page, setPage] = useState(1);
 
-  const filtered = APPLICATIONS.filter((application) => {
-    const matchesKeyword =
-      !query.keyword ||
-      application.applicant.includes(query.keyword) ||
-      application.serviceName.includes(query.keyword);
-    const matchesApi =
-      query.api === "all" || application.api.includes(query.api);
-    const matchesAccount =
-      query.account === "all" || application.accountType === query.account;
-    return matchesKeyword && matchesApi && matchesAccount;
-  });
+  const filtered = APPLICATIONS.filter(
+    (application) =>
+      (!query.keyword ||
+        application.applicant.includes(query.keyword) ||
+        application.project.includes(query.keyword)) &&
+      (query.field === "all" || application.field === query.field) &&
+      // 구분은 "첫 신청 (키 발급)"처럼 뒤에 설명이 붙어 앞부분만 비교
+      (query.kind === "all" || application.kind.startsWith(query.kind)) &&
+      (query.status === "all" || application.status === query.status) &&
+      (query.tier === "all" || application.tier === query.tier),
+  );
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
   const rows = filtered.slice(
@@ -55,8 +61,10 @@ export default function ApplyListPage() {
     event.preventDefault();
     setQuery({
       keyword: keyword.trim(),
-      api: apiFilter,
-      account: accountFilter,
+      field: fieldFilter,
+      kind: kindFilter,
+      status: statusFilter,
+      tier: tierFilter,
     });
     setPage(1);
   };
@@ -66,8 +74,10 @@ export default function ApplyListPage() {
       <PageHead>
         <PageTitle>활용신청 내역</PageTitle>
         <PageDescription>
-          활용신청은 자동승인되어 바로 키가 발급됩니다. 여기서는 신청한 내용을
-          확인합니다.
+          교내 분야는 신청하면 자동 승인되고, 제한 분야(학생 · 교직원 · 자습
+          감독처럼 개인정보가 들어간 데이터)는 관리자가 사용 목적을 보고
+          승인하거나 반려합니다. API 키는 프로젝트마다 하나이며, 프로젝트의 첫
+          승인 때 발급됩니다.
         </PageDescription>
       </PageHead>
 
@@ -75,30 +85,49 @@ export default function ApplyListPage() {
         <SearchInput
           type="search"
           value={keyword}
-          placeholder="신청자 또는 서비스명으로 검색"
-          aria-label="신청자 또는 서비스명 검색"
+          placeholder="신청자 또는 프로젝트명으로 검색"
+          aria-label="신청자 또는 프로젝트명 검색"
           onChange={(event) => setKeyword(event.target.value)}
         />
         <FilterSelect
-          aria-label="API 필터"
-          value={apiFilter}
-          onChange={(event) => setApiFilter(event.target.value)}
+          aria-label="분야 필터"
+          value={fieldFilter}
+          onChange={(event) => setFieldFilter(event.target.value)}
         >
-          <option value="all">API 전체</option>
-          <option value="학생 정보">학생 정보</option>
-          <option value="급식">급식</option>
+          <option value="all">분야 전체</option>
+          <option value="학생">학생</option>
+          <option value="교직원">교직원</option>
+          <option value="자습 감독">자습 감독</option>
           <option value="일정">일정</option>
           <option value="동아리">동아리</option>
-          <option value="자습">자습</option>
         </FilterSelect>
         <FilterSelect
-          aria-label="계정 유형 필터"
-          value={accountFilter}
-          onChange={(event) => setAccountFilter(event.target.value)}
+          aria-label="구분 필터"
+          value={kindFilter}
+          onChange={(event) => setKindFilter(event.target.value)}
         >
-          <option value="all">계정 유형 전체</option>
-          <option value="개발계정">개발계정</option>
-          <option value="운영계정">운영계정</option>
+          <option value="all">구분 전체</option>
+          <option value="첫 신청">첫 신청 (키 발급)</option>
+          <option value="분야 추가">분야 추가</option>
+        </FilterSelect>
+        <FilterSelect
+          aria-label="상태 필터"
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value)}
+        >
+          <option value="all">상태 전체</option>
+          <option value="승인 대기">승인 대기</option>
+          <option value="승인 완료">승인 완료</option>
+          <option value="반려">반려</option>
+        </FilterSelect>
+        <FilterSelect
+          aria-label="단계 필터"
+          value={tierFilter}
+          onChange={(event) => setTierFilter(event.target.value)}
+        >
+          <option value="all">단계 전체</option>
+          <option value="제한">제한</option>
+          <option value="교내">교내</option>
         </FilterSelect>
         <SearchButton type="submit">검색</SearchButton>
       </FilterBar>
@@ -106,28 +135,42 @@ export default function ApplyListPage() {
       <ApplicationTable aria-label="활용신청 목록">
         <thead>
           <tr>
-            <th scope="col">서비스 · API</th>
+            <th scope="col">프로젝트 · 분야</th>
+            <th scope="col">단계</th>
+            <th scope="col">상태</th>
             <th scope="col">신청자</th>
             <th scope="col">신청일시</th>
-            <th scope="col">계정 유형</th>
+            <th scope="col">구분</th>
             <th scope="col">상세</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((application) => (
             <tr key={application.id}>
-              <td title={application.api}>{application.api}</td>
+              <td title={`${application.project} · ${application.field}`}>
+                {application.project} · {application.field}
+              </td>
+              <td>
+                <TierText $tier={application.tier}>{application.tier}</TierText>
+              </td>
+              <td>
+                <StatusText $status={application.status}>
+                  {application.status}
+                </StatusText>
+              </td>
               <td>{application.applicant}</td>
               <td>{application.appliedAt}</td>
-              <td>{application.accountType}</td>
+              <td>{application.kind}</td>
               <td>
-                <DetailLink href={`/apply/${application.id}`}>상세</DetailLink>
+                <DetailLink href={`/apply/${application.id}`}>
+                  {application.status === "승인 대기" ? "검토하기" : "상세"}
+                </DetailLink>
               </td>
             </tr>
           ))}
           {rows.length === 0 && (
             <tr>
-              <EmptyCell colSpan={5}>검색 결과가 없습니다.</EmptyCell>
+              <EmptyCell colSpan={7}>검색 결과가 없습니다.</EmptyCell>
             </tr>
           )}
         </tbody>

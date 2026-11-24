@@ -14,6 +14,15 @@ export const Xquare_colors: ColorGroup = {
     600: "#D94040",
   },
 
+  green: {
+    500: "#0F9959",
+  },
+
+  // 제한 단계 · 승인 대기 표시용. user 앱에는 아직 없는 색
+  orange: {
+    600: "#B86105",
+  },
+
   slate: {
     50: "#F9F9FB",
     200: "#E5E8EB",

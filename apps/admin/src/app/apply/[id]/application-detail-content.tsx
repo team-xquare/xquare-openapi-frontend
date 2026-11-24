@@ -1,7 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import type { Application } from "../apply-content";
 import {
+  ActionBar,
+  ActionGroup,
+  ApproveButton,
   BackLink,
   DetailCard,
   DetailPage,
@@ -9,6 +13,10 @@ import {
   PageDescription,
   PageHead,
   PageTitle,
+  ReasonTextarea,
+  RejectButton,
+  StatusValue,
+  TierValue,
 } from "./page-style";
 
 export function ApplicationDetailContent({
@@ -16,16 +24,16 @@ export function ApplicationDetailContent({
 }: {
   application: Application;
 }) {
-  const apiName = application.api.split(" · ")[1] ?? application.api;
-  const quota =
-    application.accountType === "운영계정" ? "일 100,000회" : "일 10,000회";
+  const [reason, setReason] = useState("");
+  const isRestricted = application.tier === "제한";
+  const isPending = application.status === "승인 대기";
 
   return (
     <DetailPage>
       <PageHead>
         <PageTitle>활용신청 상세</PageTitle>
         <PageDescription>
-          {application.serviceName} · {apiName}
+          {application.project} · {application.field}
         </PageDescription>
       </PageHead>
 
@@ -37,22 +45,36 @@ export function ApplicationDetailContent({
           </dd>
         </DetailRow>
         <DetailRow>
-          <dt>API</dt>
-          <dd>{apiName}</dd>
+          <dt>분야</dt>
+          <dd>{application.field}</dd>
         </DetailRow>
         <DetailRow>
-          <dt>계정 유형</dt>
+          <dt>접근 단계</dt>
           <dd>
-            {application.accountType} · {quota}
+            <TierValue $tier={application.tier}>
+              {isRestricted
+                ? "제한 — 개인정보가 들어간 데이터라 관리자 승인이 있어야 호출할 수 있습니다"
+                : "교내 — 신청하면 자동 승인"}
+            </TierValue>
           </dd>
         </DetailRow>
         <DetailRow>
-          <dt>상태</dt>
-          <dd>승인 완료 (자동승인)</dd>
+          <dt>구분</dt>
+          <dd>{application.kind}</dd>
         </DetailRow>
         <DetailRow>
-          <dt>서비스명</dt>
-          <dd>{application.serviceName}</dd>
+          <dt>상태</dt>
+          <dd>
+            <StatusValue $status={application.status}>
+              {application.status === "승인 완료" && !isRestricted
+                ? "승인 완료 (교내 · 자동 승인)"
+                : application.status}
+            </StatusValue>
+          </dd>
+        </DetailRow>
+        <DetailRow>
+          <dt>프로젝트</dt>
+          <dd>{application.project}</dd>
         </DetailRow>
         <DetailRow>
           <dt>서비스 URL</dt>
@@ -61,7 +83,7 @@ export function ApplicationDetailContent({
           </dd>
         </DetailRow>
         <DetailRow>
-          <dt>활용 목적</dt>
+          <dt>{isRestricted ? "사용 목적" : "사용 내용"}</dt>
           <dd>{application.purpose}</dd>
         </DetailRow>
         <DetailRow>
@@ -69,16 +91,46 @@ export function ApplicationDetailContent({
           <dd>{application.appliedAt}</dd>
         </DetailRow>
         <DetailRow>
-          <dt>만료일</dt>
-          <dd>2027-10-01</dd>
+          <dt>키 만료일</dt>
+          <dd>2026-12-20 (발급일부터 60일)</dd>
         </DetailRow>
         <DetailRow>
           <dt>API 키</dt>
           <dd>xq_test_8f3a••••a0c9</dd>
         </DetailRow>
+        <DetailRow>
+          <dt>이 프로젝트의 분야</dt>
+          <dd>{application.projectFields}</dd>
+        </DetailRow>
+        {isRestricted && isPending && (
+          <DetailRow>
+            <dt>
+              <label htmlFor="reject-reason">반려 사유</label>
+            </dt>
+            <dd>
+              <ReasonTextarea
+                id="reject-reason"
+                value={reason}
+                placeholder="반려할 때 신청자에게 보여 줄 사유를 적어 주세요. (예: 사용 목적을 더 자세히 적어 주세요)"
+                onChange={(event) => setReason(event.target.value)}
+              />
+            </dd>
+          </DetailRow>
+        )}
       </DetailCard>
 
-      <BackLink href="/apply">목록으로</BackLink>
+      <ActionBar>
+        <BackLink href="/apply">목록으로</BackLink>
+        {isRestricted && isPending && (
+          <ActionGroup>
+            {/* 승인 · 반려 API 연동은 OPN-94에서 하고, 지금은 화면만 둔다 */}
+            <RejectButton type="button" disabled={reason.trim() === ""}>
+              반려
+            </RejectButton>
+            <ApproveButton type="button">승인</ApproveButton>
+          </ActionGroup>
+        )}
+      </ActionBar>
     </DetailPage>
   );
 }
