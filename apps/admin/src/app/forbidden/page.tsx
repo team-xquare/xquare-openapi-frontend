@@ -1,5 +1,6 @@
 "use client";
 
+import { logout } from "@/lib/my-info";
 import { AuthLayout } from "../../components/auth-layout/auth-layout";
 import {
   PrimaryLink,
@@ -30,8 +31,10 @@ export default function ForbiddenPage() {
           <p>관리자 계정으로 다시 로그인해 주세요.</p>
         </ForbiddenDescription>
         <ForbiddenActions>
-          {/* 로그아웃 API 연동 전이라 로그인 화면으로 이동만 함 */}
-          <PrimaryLink href="/login">다른 계정으로 로그인</PrimaryLink>
+          {/* 권한 확인 때 토큰을 지우지만, 남은 토큰이 있어도 다른 계정으로 로그인할 수 있게 지우고 이동 */}
+          <PrimaryLink href="/login" onClick={() => logout()}>
+            다른 계정으로 로그인
+          </PrimaryLink>
           <SecondaryAnchor href={OPEN_API_DOCS_URL}>Open API 문서로</SecondaryAnchor>
         </ForbiddenActions>
       </ForbiddenBox>

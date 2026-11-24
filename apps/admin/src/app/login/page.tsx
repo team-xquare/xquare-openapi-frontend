@@ -4,6 +4,7 @@ import { useId, useLayoutEffect, useRef, useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation";
 import { ApiError } from "@xquare/api";
 import { api } from "@/lib/api";
+import { loadMyInfo, logout, resetMyInfo, type MyInfo } from "@/lib/my-info";
 import { AuthLayout } from "../../components/auth-layout/auth-layout";
 import {
   LoginButton,
@@ -50,12 +51,28 @@ export default function AdminLoginPage() {
     setSubmitting(true);
     setError("");
     try {
-      // ADMIN 권한 확인과 권한 없음(403) 이동은 OPN-78에서 붙임
       await api.auth.login(
         { username: username.trim(), password },
         { signal: attempt.signal },
       );
-      if (!attempt.signal.aborted) router.push("/");
+      // 이전에 받아 둔 계정 정보를 버리고 새로 로그인한 계정의 권한을 확인함
+      resetMyInfo();
+      let info: MyInfo;
+      try {
+        info = await loadMyInfo();
+      } catch (infoError) {
+        // 권한을 확인하지 못했으면 로그인하지 않은 것으로 되돌림
+        if (!attempt.signal.aborted) logout();
+        throw infoError;
+      }
+      if (attempt.signal.aborted) return;
+      if (info.role !== "ADMIN") {
+        // 권한 없음 화면에서 다른 계정으로 다시 로그인할 수 있게 토큰을 지움
+        logout();
+        router.push("/forbidden");
+        return;
+      }
+      router.push("/");
     } catch (loginError) {
       if (attempt.signal.aborted) return;
       setError(
