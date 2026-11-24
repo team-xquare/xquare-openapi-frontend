@@ -67,12 +67,4 @@ export const ENDPOINT_GROUPS: EndpointGroup[] = [
       { method: "GET", description: "학생 정보 조회", detailId: "get-student" },
     ],
   },
-  {
-    id: "notice",
-    title: "공지",
-    endpoints: [
-      { method: "GET", description: "공지 목록 조회" },
-      { method: "GET", description: "공지 조회" },
-    ],
-  },
 ];
