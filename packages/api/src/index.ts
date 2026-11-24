@@ -513,6 +513,18 @@ export function createApiClient(options: ApiClientOptions) {
       }
       return token;
     },
+    // 인증코드 검증으로 받은 토큰으로 새 비밀번호를 정함. 로그인 토큰은 주지 않아서 저장하지 않음
+    async resetPassword(
+      body: { emailVerifiedToken: string; newPassword: string },
+      init?: { signal?: AbortSignal },
+    ) {
+      await request<unknown>("/auth/password/reset", {
+        method: "POST",
+        body,
+        auth: false,
+        signal: init?.signal,
+      });
+    },
     // 서버에 로그아웃 API가 없어서 저장한 토큰만 지움
     logout() {
       options.storage.clear();
