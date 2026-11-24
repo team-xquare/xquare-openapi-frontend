@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { APPLICATIONS } from "./apply-content";
+import { APPLICATIONS, canReview } from "./apply-content";
 import {
   ApplicationTable,
   ApplyPage,
@@ -163,7 +163,7 @@ export default function ApplyListPage() {
               <td>{application.kind}</td>
               <td>
                 <DetailLink href={`/apply/${application.id}`}>
-                  {application.status === "승인 대기" ? "검토하기" : "상세"}
+                  {canReview(application) ? "검토하기" : "상세"}
                 </DetailLink>
               </td>
             </tr>

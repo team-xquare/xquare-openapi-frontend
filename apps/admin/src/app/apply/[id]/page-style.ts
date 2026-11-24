@@ -151,6 +151,12 @@ export const ReasonTextarea = styled.textarea`
   }
 `;
 
+export const ReasonHelp = styled.p`
+  color: ${Xquare_colors.slate[600]};
+  font-size: 13px;
+  margin: 8px 0 0;
+`;
+
 export const TierValue = styled.span<{ $tier: "제한" | "교내" }>`
   color: ${({ $tier }) =>
     $tier === "제한" ? Xquare_colors.orange[600] : Xquare_colors.slate[900]};
@@ -164,5 +170,5 @@ export const StatusValue = styled.span<{
       ? Xquare_colors.orange[600]
       : $status === "반려"
         ? Xquare_colors.red[600]
-        : Xquare_colors.green[500]};
+        : Xquare_colors.green[700]};
 `;

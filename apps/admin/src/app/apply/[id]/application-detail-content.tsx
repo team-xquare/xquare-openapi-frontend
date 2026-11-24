@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Application } from "../apply-content";
+import { canReview, type Application } from "../apply-content";
 import {
   ActionBar,
   ActionGroup,
@@ -13,6 +13,7 @@ import {
   PageDescription,
   PageHead,
   PageTitle,
+  ReasonHelp,
   ReasonTextarea,
   RejectButton,
   StatusValue,
@@ -26,7 +27,7 @@ export function ApplicationDetailContent({
 }) {
   const [reason, setReason] = useState("");
   const isRestricted = application.tier === "제한";
-  const isPending = application.status === "승인 대기";
+  const isReviewable = canReview(application);
 
   return (
     <DetailPage>
@@ -102,7 +103,7 @@ export function ApplicationDetailContent({
           <dt>이 프로젝트의 분야</dt>
           <dd>{application.projectFields}</dd>
         </DetailRow>
-        {isRestricted && isPending && (
+        {isReviewable && (
           <DetailRow>
             <dt>
               <label htmlFor="reject-reason">반려 사유</label>
@@ -110,10 +111,14 @@ export function ApplicationDetailContent({
             <dd>
               <ReasonTextarea
                 id="reject-reason"
+                aria-describedby="reject-reason-help"
                 value={reason}
                 placeholder="반려할 때 신청자에게 보여 줄 사유를 적어 주세요. (예: 사용 목적을 더 자세히 적어 주세요)"
                 onChange={(event) => setReason(event.target.value)}
               />
+              <ReasonHelp id="reject-reason-help">
+                반려 사유를 입력해야 반려할 수 있습니다
+              </ReasonHelp>
             </dd>
           </DetailRow>
         )}
@@ -121,7 +126,7 @@ export function ApplicationDetailContent({
 
       <ActionBar>
         <BackLink href="/apply">목록으로</BackLink>
-        {isRestricted && isPending && (
+        {isReviewable && (
           <ActionGroup>
             {/* 승인 · 반려 API 연동은 OPN-94에서 하고, 지금은 화면만 둔다 */}
             <RejectButton type="button" disabled={reason.trim() === ""}>

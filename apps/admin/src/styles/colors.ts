@@ -4,7 +4,8 @@ export interface ColorGroup {
 }
 
 // user 앱 Xquare_colors 중 admin 화면에서 쓰는 색만 같은 이름으로 둠
-// 공유 패키지로 옮길 때 그대로 합칠 수 있도록 값과 키를 바꾸지 않음
+// 공유 패키지로 옮길 때 그대로 합칠 수 있도록 user 앱에 있는 키의 값은 바꾸지 않음
+// user 앱에 없는 색은 새 키로 따로 둠 (green[700], orange[600])
 export const Xquare_colors: ColorGroup = {
   black: "#000000",
   white: "#FFFFFF",
@@ -14,9 +15,10 @@ export const Xquare_colors: ColorGroup = {
     600: "#D94040",
   },
 
+  // user 앱 green[500]은 #0F9959라 글자 대비가 모자라서, 같은 키를 쓰지 않고 새 키로 둠
   // 흰 배경 글자 대비 4.5:1 이상(WCAG AA)이 되도록 고른 값 (5.0:1)
   green: {
-    500: "#0C8048",
+    700: "#0C8048",
   },
 
   // 제한 단계 · 승인 대기 표시용. user 앱에는 아직 없는 색

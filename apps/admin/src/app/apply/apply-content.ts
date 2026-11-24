@@ -18,6 +18,7 @@ export type Application = {
   projectFields: string;
 };
 
+// 신청일시 최신순
 export const APPLICATIONS: Application[] = [
   {
     id: "application-5",
@@ -34,20 +35,6 @@ export const APPLICATIONS: Application[] = [
     projectFields: "동아리, 일정 (승인 완료) · 학생 (승인 대기)",
   },
   {
-    id: "application-4",
-    project: "dsm-timetable",
-    field: "교직원",
-    tier: "제한",
-    status: "반려",
-    applicant: "전재준",
-    username: "jaejun0210",
-    appliedAt: "2026-11-02 10:07",
-    kind: "분야 추가",
-    purpose: "교직원 정보를 시간표에 표시하려고 합니다",
-    url: "https://timetable.example.com",
-    projectFields: "일정 (승인 완료) · 교직원 (반려)",
-  },
-  {
     id: "application-3",
     project: "team-xquare",
     field: "일정",
@@ -60,6 +47,20 @@ export const APPLICATIONS: Application[] = [
     purpose: "학교 일정을 서비스 달력에 보여 줍니다",
     url: "https://team-xquare.example.com",
     projectFields: "동아리, 일정 (승인 완료) · 학생 (승인 대기)",
+  },
+  {
+    id: "application-4",
+    project: "dsm-timetable",
+    field: "교직원",
+    tier: "제한",
+    status: "반려",
+    applicant: "전재준",
+    username: "jaejun0210",
+    appliedAt: "2026-11-02 10:07",
+    kind: "분야 추가",
+    purpose: "교직원 정보를 시간표에 표시하려고 합니다",
+    url: "https://timetable.example.com",
+    projectFields: "일정 (승인 완료) · 교직원 (반려)",
   },
   {
     id: "application-2",
@@ -90,3 +91,7 @@ export const APPLICATIONS: Application[] = [
     projectFields: "자습 감독 (승인 완료)",
   },
 ];
+
+// 승인 · 반려를 할 수 있는 신청: 제한 단계이고 승인 대기인 것 (목록과 상세가 같이 씀)
+export const canReview = (application: Application) =>
+  application.tier === "제한" && application.status === "승인 대기";

@@ -54,6 +54,7 @@ export const PageDescription = styled.p`
 export const FilterBar = styled.form`
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 20px;
 `;
@@ -72,7 +73,8 @@ export const FilterSelect = styled.select`
   ${CONTROL}
   cursor: pointer;
   padding: 0 38px 0 16px;
-  width: 150px;
+  /* "첫 신청 (키 발급)"처럼 긴 옵션도 잘리지 않는 폭 */
+  width: 184px;
 `;
 
 export const SearchButton = styled.button`
@@ -99,30 +101,30 @@ export const ApplicationTable = styled.table`
     font-size: 14px;
     font-weight: 700;
     height: 56px;
-    padding: 0 20px;
+    padding: 0 12px;
     text-align: left;
   }
 
   th:nth-of-type(1) {
-    width: 26%;
+    width: 24%;
   }
   th:nth-of-type(2) {
-    width: 8%;
+    width: 7%;
   }
   th:nth-of-type(3) {
-    width: 11%;
+    width: 12%;
   }
   th:nth-of-type(4) {
     width: 10%;
   }
   th:nth-of-type(5) {
-    width: 16%;
+    width: 19%;
   }
   th:nth-of-type(6) {
     width: 18%;
   }
   th:nth-of-type(7) {
-    width: 11%;
+    width: 10%;
   }
 
   td {
@@ -131,7 +133,7 @@ export const ApplicationTable = styled.table`
     font-size: 15px;
     height: 66px;
     overflow: hidden;
-    padding: 0 20px;
+    padding: 0 12px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -154,7 +156,7 @@ export const StatusText = styled.span<{
       ? Xquare_colors.orange[600]
       : $status === "반려"
         ? Xquare_colors.red[600]
-        : Xquare_colors.green[500]};
+        : Xquare_colors.green[700]};
   font-weight: ${({ $status }) => ($status === "승인 대기" ? 700 : 400)};
 `;
 
