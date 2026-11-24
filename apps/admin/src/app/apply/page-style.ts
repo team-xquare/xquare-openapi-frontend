@@ -67,6 +67,11 @@ export const SearchInput = styled.input`
   &::placeholder {
     color: ${Xquare_colors.slate[400]};
   }
+
+  &:disabled {
+    background: ${Xquare_colors.slate[50]};
+    cursor: not-allowed;
+  }
 `;
 
 export const FilterSelect = styled.select`
@@ -75,6 +80,11 @@ export const FilterSelect = styled.select`
   padding: 0 38px 0 16px;
   /* "첫 신청 (키 발급)"처럼 긴 옵션도 잘리지 않는 폭 */
   width: 184px;
+
+  &:disabled {
+    background: ${Xquare_colors.slate[50]};
+    cursor: not-allowed;
+  }
 `;
 
 export const SearchButton = styled.button`
@@ -82,11 +92,47 @@ export const SearchButton = styled.button`
   cursor: pointer;
   padding: 0 20px;
 
+  &:disabled {
+    background: ${Xquare_colors.slate[50]};
+    cursor: not-allowed;
+  }
+
   &:hover,
   &:focus-visible {
     border-color: ${Xquare_colors.purple[400]};
     color: ${Xquare_colors.purple[400]};
   }
+`;
+
+export const RetryButton = styled.button`
+  ${CONTROL}
+  cursor: pointer;
+  height: 40px;
+  padding: 0 16px;
+
+  &:hover,
+  &:focus-visible {
+    border-color: ${Xquare_colors.purple[400]};
+    color: ${Xquare_colors.purple[400]};
+  }
+`;
+
+export const CellStatus = styled.div`
+  align-items: center;
+  display: inline-flex;
+  gap: 12px;
+`;
+
+// 서버에 아직 없는 값(상태 · 신청자)의 빈 칸 표시
+export const PendingValue = styled.span`
+  color: ${Xquare_colors.slate[400]};
+`;
+
+// 서버 연동 전이라 쓸 수 없는 필터 · 검색 안내
+export const FilterNote = styled.p`
+  color: ${Xquare_colors.slate[600]};
+  font-size: 13px;
+  margin: -8px 0 20px;
 `;
 
 export const ApplicationTable = styled.table`

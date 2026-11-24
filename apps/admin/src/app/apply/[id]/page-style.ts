@@ -172,3 +172,32 @@ export const StatusValue = styled.span<{
         ? Xquare_colors.red[600]
         : Xquare_colors.green[700]};
 `;
+
+// 활용신청을 불러오는 중이거나 불러오지 못했을 때
+export const LoadStatus = styled.div`
+  color: ${Xquare_colors.slate[600]};
+  font-size: 14px;
+
+  p {
+    margin: 0 0 16px;
+  }
+`;
+
+export const LoadButton = styled.button`
+  background: ${Xquare_colors.white};
+  border: ${STRONG_BORDER};
+  border-radius: 9px;
+  color: ${Xquare_colors.slate[900]};
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  padding: 13px 0;
+  width: 114px;
+
+  &:hover,
+  &:focus-visible {
+    border-color: ${Xquare_colors.purple[400]};
+    color: ${Xquare_colors.purple[400]};
+    outline: none;
+  }
+`;
