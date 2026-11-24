@@ -162,17 +162,6 @@ export const TierValue = styled.span<{ $tier: "제한" | "교내" }>`
     $tier === "제한" ? Xquare_colors.orange[600] : Xquare_colors.slate[900]};
 `;
 
-export const StatusValue = styled.span<{
-  $status: "승인 대기" | "반려" | "승인 완료";
-}>`
-  color: ${({ $status }) =>
-    $status === "승인 대기"
-      ? Xquare_colors.orange[600]
-      : $status === "반려"
-        ? Xquare_colors.red[600]
-        : Xquare_colors.green[700]};
-`;
-
 // 활용신청을 불러오는 중이거나 불러오지 못했을 때
 export const LoadStatus = styled.div`
   color: ${Xquare_colors.slate[600]};
