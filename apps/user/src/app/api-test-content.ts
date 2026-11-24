@@ -1,40 +1,20 @@
+import { API_BASE_URL } from "../lib/api";
+
 export type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
 
 export const HTTP_METHODS: HttpMethod[] = ["GET", "POST", "PATCH", "DELETE"];
 
+// 키 없이 호출할 수 있는 공개 API(급식)를 기본 요청으로 둠
 export const DEFAULT_REQUEST: { method: HttpMethod; url: string } = {
   method: "GET",
-  url: "https://open.xquare.app/students",
+  url: `${API_BASE_URL.replace(/\/+$/, "")}/meals`,
 };
 
-// 기본 예시(GET /students)에서 입력받는 쿼리 파라미터
+// 기본 예시(GET /meals)에서 입력받는 쿼리 파라미터 (Swagger MealSearchRequest 기준, 둘 다 비우면 이번 달)
 export const QUERY_FIELDS = [
-  { key: "grade", placeholder: "학년 (예: 2)" },
-  { key: "classNum", placeholder: "반 (예: 3)" },
+  { key: "startDate", placeholder: "시작일 (예: 2026-11-01)" },
+  { key: "finishDate", placeholder: "종료일 (예: 2026-11-30)" },
 ];
-
-// 실제 호출 연동 전까지 보여줄 예시 응답
-export const SAMPLE_RESPONSE = {
-  status: "200 OK",
-  duration: "128 ms",
-  size: "412 B",
-  body: [
-    "{",
-    '  "content": [',
-    '    { "id": 1, "studentNumber": 2315, "name": "장윤호", ... }',
-    "  ],",
-    '  "page": 0,',
-    '  "size": 20,',
-    '  "totalCount": 31,',
-    '  "totalPage": 2',
-    "}",
-  ],
-  headers: [
-    "HTTP/1.1 200 OK",
-    "Content-Type: application/json",
-    "Content-Length: 412",
-  ],
-};
 
 export interface CallHistoryItem {
   id: string;
@@ -44,27 +24,15 @@ export interface CallHistoryItem {
   calledAt: string;
 }
 
-// 최신순 정렬
-export const CALL_HISTORY: CallHistoryItem[] = [
-  {
-    id: "3",
-    method: "GET",
-    path: "/students?grade=2&classNum=3",
-    status: 200,
-    calledAt: "14:32:10",
-  },
-  {
-    id: "2",
-    method: "GET",
-    path: "/students?grade=2",
-    status: 200,
-    calledAt: "14:29:55",
-  },
-  {
-    id: "1",
-    method: "GET",
-    path: "/students/15",
-    status: 404,
-    calledAt: "14:28:02",
-  },
-];
+export interface ApiResponse {
+  // 0이면 서버에 닿지 못한 것(네트워크·CORS 오류)
+  status: number;
+  statusText: string;
+  duration: number;
+  size: number;
+  body: string;
+  headers: string[];
+  errorMessage?: string;
+  // 응답 칩에 보여줄 오류 이름 (없으면 "연결 실패")
+  errorLabel?: string;
+}
