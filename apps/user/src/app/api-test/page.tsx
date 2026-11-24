@@ -173,11 +173,13 @@ export default function ApiTestPage() {
   // 지금 진행 중인 요청 (취소·시간 초과·화면 이동 때 멈추고, 늦게 온 이전 응답을 가려내는 데 씀)
   const abortRef = useRef<AbortController | null>(null);
 
-  // 화면을 떠나면 진행 중인 요청을 멈추고 이후 상태 변경은 무시
+  // 화면을 떠나면 진행 중인 요청을 멈추고 이후 상태 변경은 무시.
+  // 화면 상태가 남아 있어서 보내는 중 표시도 여기서 풀어야 돌아왔을 때 다시 보낼 수 있음
   useEffect(
     () => () => {
       abortRef.current?.abort();
       abortRef.current = null;
+      setIsSending(false);
     },
     [],
   );
