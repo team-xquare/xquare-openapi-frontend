@@ -165,8 +165,9 @@ export default function UsageLogPage() {
             <tr key={log.id}>
               <td title={log.api}>{log.api}</td>
               <td>{log.field}</td>
-              <td>
-                <Status ok={log.ok}>{log.status}</Status>
+              <td title={log.status}>
+                {/* 긴 오류 코드가 단어 중간이 아니라 _ 뒤에서 줄이 바뀌도록 폭 없는 공백을 넣음 */}
+                <Status ok={log.ok}>{log.status.replaceAll("_", "_​")}</Status>
               </td>
               <td>{log.applicant}</td>
               <td>{log.calledAt}</td>

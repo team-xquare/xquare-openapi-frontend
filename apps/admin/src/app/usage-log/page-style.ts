@@ -146,9 +146,15 @@ export const UsageTable = styled.table`
   }
 `;
 
+// 오류 코드가 이 화면에서 가장 중요한 정보라 말줄임 대신 줄을 바꿔 전부 보여줌
+// ("500 INTERNAL_SERVER_ERROR"처럼 긴 코드는 좁은 폭에서 열보다 김)
 export const Status = styled.span<{ ok: boolean }>`
   color: ${({ ok }) => (ok ? OK_COLOR : Xquare_colors.red[600])};
+  display: block;
   font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: normal;
 `;
 
 export const DetailButton = styled.button`
