@@ -76,6 +76,19 @@ export const ListHint = styled(Hint)`
   margin-bottom: 20px;
 `;
 
+// 교직원 선택지를 불러오지 못했을 때 선택 칸 가까이에 두는 실패 문구와 다시 시도 버튼
+export const ChoiceError = styled.div`
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+`;
+
+// 목록 조회 조건 아래. 안내 문구와 FilterBar 사이 간격을 같이 맞춤
+export const FilterChoiceError = styled(ChoiceError)`
+  margin-bottom: 12px;
+`;
+
 // 열 너비는 Figma 자습감독 목록 기준. 마지막(수정·삭제) 열이 남는 폭을 가짐
 export const SupervisionTable = styled(NoticeTable)`
   /* 겹친 테두리 표에서는 높이에 아래 구분선 1px이 들어가므로 Figma 높이 + 1px */

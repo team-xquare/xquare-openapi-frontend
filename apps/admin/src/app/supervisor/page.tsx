@@ -1,12 +1,20 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
+import { useRouter } from "next/navigation";
+import { CellStatus } from "@/components/request-status/request-status-style";
+import { api } from "@/lib/api";
+import { errorMessage, isAbortError } from "@/lib/api-error";
+import { useToday } from "@/lib/use-today";
 import {
   FLOORS,
-  SUPERVISION_BASE_MONTH,
-  SUPERVISION_BASE_YEAR,
-  SUPERVISIONS,
-  TEACHERS,
+  fetchMonthSupervisions,
   getWeekday,
   toMonthPrefix,
   type Supervision,
@@ -27,36 +35,88 @@ import {
 } from "../notice/page-style";
 import { DeleteSupervisionModal } from "./delete-supervision-modal";
 import {
+  ErrorText,
   FilterBar,
+  FilterChoiceError,
   ListHint,
   Muted,
   Select,
   SelectBox,
   SupervisionTable,
 } from "./page-style";
+import { useTeacherChoices } from "./use-teacher-choices";
 
-const YEARS = [
-  SUPERVISION_BASE_YEAR - 1,
-  SUPERVISION_BASE_YEAR,
-  SUPERVISION_BASE_YEAR + 1,
-];
 const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1);
 
-const BASE_FILTER = {
-  year: SUPERVISION_BASE_YEAR,
-  month: SUPERVISION_BASE_MONTH,
-  teacher: "",
-};
+interface Filter {
+  year: number;
+  month: number;
+  // 교직원 id. 빈 문자열이면 전체
+  teacher: string;
+}
 
 export default function SupervisorListPage() {
-  // API 연동 전이라 삭제는 화면의 더미 목록에서만 빠짐
-  const [supervisions, setSupervisions] = useState(SUPERVISIONS);
-  const [year, setYear] = useState(BASE_FILTER.year);
-  const [month, setMonth] = useState(BASE_FILTER.month);
-  const [teacher, setTeacher] = useState(BASE_FILTER.teacher);
-  const [filter, setFilter] = useState(BASE_FILTER);
+  const router = useRouter();
+  // 미리 그릴 때와 첫 화면 연결 때는 null이라 그동안은 기간을 정하지 않음
+  const today = useToday();
+  const {
+    teachers: teacherChoices,
+    error: teacherError,
+    retry: retryTeachers,
+  } = useTeacherChoices();
+  // 불러온 달(YYYY-MM)과 그 달 배정. 다른 달을 조회하면 새로 받을 때까지 불러오는 중으로 보임
+  const [loaded, setLoaded] = useState<{
+    month: string;
+    supervisions: Supervision[];
+  } | null>(null);
+  const [loadError, setLoadError] = useState("");
+  // 바뀌면 목록을 다시 불러옴 (조회 · 다시 시도 · 삭제 후)
+  const [reloadKey, setReloadKey] = useState(0);
+  // 조회 조건에서 고른 연 · 월. 고르기 전(null)에는 이번 달
+  const [year, setYear] = useState<number | null>(null);
+  const [month, setMonth] = useState<number | null>(null);
+  const [teacher, setTeacher] = useState("");
+  // 조회한 조건. 조회하기 전(null)에는 이번 달 전체
+  const [filter, setFilter] = useState<Filter | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Supervision | null>(null);
   const yearSelectRef = useRef<HTMLSelectElement>(null);
+
+  const currentYear = today ? Number(today.slice(0, 4)) : null;
+  const currentMonth = today ? Number(today.slice(5, 7)) : null;
+  const pickedYear = year ?? currentYear;
+  const pickedMonth = month ?? currentMonth;
+  const years =
+    currentYear === null ? [] : [currentYear - 1, currentYear, currentYear + 1];
+  const applied: Filter | null =
+    filter ??
+    (currentYear !== null && currentMonth !== null
+      ? { year: currentYear, month: currentMonth, teacher: "" }
+      : null);
+  // 불러올 달. 오늘 날짜를 읽기 전에는 null
+  const period = applied ? toMonthPrefix(applied.year, applied.month) : null;
+
+  // 다른 화면에서 돌아와 다시 보일 때도 effect가 다시 돌아 최신 목록을 받음
+  useEffect(() => {
+    // 로그인 여부는 저장소를 읽어야 해서 렌더 중이 아니라 effect에서 확인
+    if (!api.auth.isLoggedIn()) {
+      router.replace("/login");
+      return;
+    }
+    if (period === null) return;
+    const request = new AbortController();
+    fetchMonthSupervisions(period, request.signal)
+      .then((supervisions) => {
+        setLoaded({ month: period, supervisions });
+        setLoadError("");
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error) || request.signal.aborted) return;
+        setLoadError(
+          errorMessage(error, "자습감독 배정 목록을 불러오지 못했습니다."),
+        );
+      });
+    return () => request.abort();
+  }, [router, period, reloadKey]);
 
   // 다른 페이지로 이동해도 화면이 숨겨진 채 상태가 남으므로,
   // 열려 있던 삭제 모달이 돌아왔을 때 배경 없이 남지 않도록 숨겨질 때 닫음
@@ -64,20 +124,25 @@ export default function SupervisorListPage() {
     return () => setDeleteTarget(null);
   }, []);
 
-  const monthPrefix = toMonthPrefix(filter.year, filter.month);
-  const rows = supervisions
-    .filter(
-      (supervision) =>
-        supervision.date.startsWith(monthPrefix) &&
-        (!filter.teacher ||
-          FLOORS.some((floor) => supervision.teachers[floor] === filter.teacher)),
-    )
-    .sort((a, b) => a.date.localeCompare(b.date));
+  // 아직 조회한 달을 받지 못했으면 null
+  const supervisions =
+    loaded && loaded.month === period ? loaded.supervisions : null;
+  const teacherFilter = applied?.teacher ?? "";
+  const rows = (supervisions ?? []).filter(
+    (supervision) =>
+      !teacherFilter ||
+      FLOORS.some(
+        (floor) => String(supervision.teachers[floor]?.id) === teacherFilter,
+      ),
+  );
 
-  // 조건을 바꾼 뒤 조회 버튼(또는 Enter)을 눌렀을 때 거름
+  // 조건을 바꾼 뒤 조회 버튼(또는 Enter)을 눌렀을 때 거르고, 같은 달이어도 다시 받음
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setFilter({ year, month, teacher });
+    if (pickedYear === null || pickedMonth === null) return;
+    setFilter({ year: pickedYear, month: pickedMonth, teacher });
+    setLoadError("");
+    setReloadKey((key) => key + 1);
   };
 
   return (
@@ -96,11 +161,11 @@ export default function SupervisorListPage() {
         <SelectBox width={140}>
           <Select
             ref={yearSelectRef}
-            value={year}
+            value={pickedYear ?? ""}
             aria-label="연도"
             onChange={(event) => setYear(Number(event.target.value))}
           >
-            {YEARS.map((option) => (
+            {years.map((option) => (
               <option key={option} value={option}>
                 {option}년
               </option>
@@ -109,7 +174,7 @@ export default function SupervisorListPage() {
         </SelectBox>
         <SelectBox width={120}>
           <Select
-            value={month}
+            value={pickedMonth ?? ""}
             aria-label="월"
             onChange={(event) => setMonth(Number(event.target.value))}
           >
@@ -128,15 +193,24 @@ export default function SupervisorListPage() {
             onChange={(event) => setTeacher(event.target.value)}
           >
             <option value="">담당 선생님 전체</option>
-            {TEACHERS.map((option) => (
-              <option key={option} value={option}>
-                {option}
+            {(teacherChoices ?? []).map((option) => (
+              <option key={option.id} value={String(option.id)}>
+                {option.name}
               </option>
             ))}
           </Select>
         </SelectBox>
         <SecondaryButton type="submit">조회</SecondaryButton>
       </FilterBar>
+      {/* 교직원 목록을 못 불러와도 연 · 월 조회와 목록은 그대로 쓸 수 있음 */}
+      {teacherError && (
+        <FilterChoiceError role="alert">
+          <ErrorText>{teacherError}</ErrorText>
+          <SecondaryButton type="button" onClick={retryTeachers}>
+            다시 시도
+          </SecondaryButton>
+        </FilterChoiceError>
+      )}
       <ListHint>
         한 날짜에 층별 배정을 묶어서 관리합니다. 배정하지 않은 층은 미배정으로
         저장되고, 여기서 등록한 내용이 일정 관리의 자습 감독에 그대로
@@ -160,12 +234,12 @@ export default function SupervisorListPage() {
         </thead>
         <tbody>
           {rows.map((supervision) => (
-            <tr key={supervision.date}>
+            <tr key={supervision.id}>
               <td>{supervision.date}</td>
               <td>{getWeekday(supervision.date)}</td>
               {FLOORS.map((floor) => (
                 <td key={floor}>
-                  {supervision.teachers[floor] ?? <Muted>미배정</Muted>}
+                  {supervision.teachers[floor]?.name ?? <Muted>미배정</Muted>}
                 </td>
               ))}
               <td>
@@ -190,9 +264,26 @@ export default function SupervisorListPage() {
           {rows.length === 0 && (
             <tr>
               <EmptyCell colSpan={6}>
-                {filter.teacher
-                  ? "조건에 맞는 배정이 없습니다."
-                  : "이 달에 등록된 배정이 없습니다."}
+                {loadError ? (
+                  <CellStatus role="alert">
+                    {loadError}
+                    <SecondaryButton
+                      type="button"
+                      onClick={() => {
+                        setLoadError("");
+                        setReloadKey((key) => key + 1);
+                      }}
+                    >
+                      다시 시도
+                    </SecondaryButton>
+                  </CellStatus>
+                ) : supervisions === null ? (
+                  "자습감독 배정 목록을 불러오는 중입니다."
+                ) : teacherFilter ? (
+                  "조건에 맞는 배정이 없습니다."
+                ) : (
+                  "이 달에 등록된 배정이 없습니다."
+                )}
               </EmptyCell>
             </tr>
           )}
@@ -201,12 +292,20 @@ export default function SupervisorListPage() {
 
       {deleteTarget && (
         <DeleteSupervisionModal
-          date={deleteTarget.date}
+          supervision={deleteTarget}
           onClose={() => setDeleteTarget(null)}
-          onConfirm={() => {
-            setSupervisions((prev) =>
-              prev.filter((item) => item.date !== deleteTarget.date),
+          onDeleted={() => {
+            // 지운 행은 바로 빼고, 그 사이 바뀐 내용까지 맞추도록 목록을 다시 받음
+            setLoaded(
+              (prev) =>
+                prev && {
+                  ...prev,
+                  supervisions: prev.supervisions.filter(
+                    (item) => item.id !== deleteTarget.id,
+                  ),
+                },
             );
+            setReloadKey((key) => key + 1);
             // 지운 행의 삭제 버튼이 사라져 포커스가 갈 곳이 없으므로 조회 조건으로 옮김
             yearSelectRef.current?.focus();
           }}
