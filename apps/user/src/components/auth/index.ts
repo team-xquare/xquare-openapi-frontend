@@ -7,6 +7,7 @@ export {
   AuthLiveMessage,
   AuthLinkButton,
   AuthLinkRow,
+  AuthNotice,
   AuthTitle,
   PasswordHelpLink,
 } from "./auth-style";
