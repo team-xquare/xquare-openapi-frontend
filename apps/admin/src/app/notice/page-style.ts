@@ -384,3 +384,39 @@ export const ModalDangerButton = styled.button`
   font-size: 14px;
   font-weight: 500;
 `;
+
+export const ModalError = styled.p`
+  color: ${Xquare_colors.red[500]};
+  font-size: 13px;
+  line-height: normal;
+  margin: 12px 0 0;
+`;
+
+// 저장 실패 문구. 입력 카드와 버튼 사이에 둠
+export const FormError = styled.p`
+  color: ${Xquare_colors.red[500]};
+  font-size: 13px;
+  line-height: normal;
+  margin: 16px 0 0;
+`;
+
+// 표 칸 안의 불러오기 실패 문구와 다시 시도 버튼
+export const CellStatus = styled.div`
+  align-items: center;
+  display: inline-flex;
+  gap: 12px;
+`;
+
+// 수정 화면에서 공지를 불러오는 중이거나 불러오지 못했을 때
+export const LoadStatus = styled.div`
+  align-items: flex-start;
+  color: ${Xquare_colors.slate[600]};
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  gap: 16px;
+
+  p {
+    margin: 0;
+  }
+`;
