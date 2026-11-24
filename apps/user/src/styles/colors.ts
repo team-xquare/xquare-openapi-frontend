@@ -39,6 +39,7 @@ export const Xquare_colors: ColorGroup = {
     100: "#F6F7F9",
     200: "#E5E8EB",
     400: "#B1B8BE",
+    500: "#8C8C94",
     600: "#5C646B",
     900: "#1E2124",
   },
