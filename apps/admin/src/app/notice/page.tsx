@@ -120,6 +120,23 @@ export default function NoticeListPage() {
         <SecondaryButton type="submit">검색</SecondaryButton>
       </SearchBar>
 
+      {/* 목록이 이미 보이는데 다시 불러오기(삭제 뒤 · 다시 들어올 때)가 실패하면
+          빈 행 자리가 없어 알 수 없으므로 표 위에 알림 */}
+      {loadError && rows.length > 0 && (
+        <CellStatus role="alert">
+          {loadError} 지금 보이는 목록은 최신이 아닐 수 있습니다.
+          <SecondaryButton
+            type="button"
+            onClick={() => {
+              setLoadError("");
+              setReloadKey((key) => key + 1);
+            }}
+          >
+            다시 시도
+          </SecondaryButton>
+        </CellStatus>
+      )}
+
       <NoticeTable aria-label="공지 목록">
         <thead>
           <tr>

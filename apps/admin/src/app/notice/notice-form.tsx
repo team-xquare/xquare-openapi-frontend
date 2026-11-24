@@ -250,7 +250,12 @@ export function NoticeEditForm({ id }: { id: string }) {
           notFound: isNotFoundError(error),
         });
       });
-    return () => request.abort();
+    return () => {
+      request.abort();
+      // 화면을 떠났다 돌아오면 화면 상태가 남아 있어서, 비우지 않으면 다시 불러오는 동안
+      // 저장 전 내용의 폼이 보이고 그 폼으로 저장할 수 있었음. 다시 불러올 때까지 불러오는 중 화면을 보여 줌
+      setNotice(null);
+    };
   }, [id, router, reloadKey]);
 
   // 같은 공지를 다시 불러와도 입력 중인 폼이 초기화되지 않도록 id와 수정일시로 폼을 구분

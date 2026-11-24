@@ -70,8 +70,10 @@ export function DeleteNoticeModal({
     }
     requestRef.current = null;
     setDeleting(false);
-    onDeleted();
+    // 먼저 닫아야 함. 모달이 열려 있는 동안에는 바깥 요소에 포커스를 줄 수 없어서
+    // onDeleted에서 옮긴 포커스가 무시되고, 지워질 행의 버튼으로 돌아갔다가 사라졌음
     dialogRef.current?.close();
+    onDeleted();
   };
 
   return (
