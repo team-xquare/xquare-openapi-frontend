@@ -134,23 +134,21 @@ export const StudentTable = styled.table`
     text-align: left;
   }
 
+  /* 학생 API에 학과가 없어 학과 칸을 빼고 나머지 칸에 나눔 */
   th:nth-of-type(1) {
-    width: 13%;
-  }
-  th:nth-of-type(2) {
-    width: 18%;
-  }
-  th:nth-of-type(3) {
-    width: 12%;
-  }
-  th:nth-of-type(4) {
-    width: 23%;
-  }
-  th:nth-of-type(5) {
     width: 16%;
   }
-  th:nth-of-type(6) {
-    width: 18%;
+  th:nth-of-type(2) {
+    width: 14%;
+  }
+  th:nth-of-type(3) {
+    width: 30%;
+  }
+  th:nth-of-type(4) {
+    width: 20%;
+  }
+  th:nth-of-type(5) {
+    width: 20%;
   }
 
   td {
@@ -196,6 +194,9 @@ export const EmptyCell = styled.td`
   height: 120px !important;
   text-align: center;
 `;
+
+// 목록을 불러오지 못했을 때의 다시 시도 버튼. 검색 버튼과 같은 모양
+export const RetryButton = styled(SearchButton)``;
 
 export const Pager = styled.div`
   align-items: center;
