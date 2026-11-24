@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DEFAULT_REQUEST,
   HTTP_METHODS,
@@ -19,6 +19,7 @@ import {
   ApiTestPanel,
   ApiTestTitle,
   BodyInput,
+  CancelButton,
   Card,
   CardBody,
   CardHead,
@@ -47,6 +48,8 @@ import {
 
 const REQUEST_TABS = ["Params", "Headers", "Body"];
 const RESPONSE_TABS = ["Body", "Headers", "cURL"];
+// 서버가 이 시간 안에 응답하지 않으면 요청을 멈춤
+const REQUEST_TIMEOUT_MS = 30000;
 
 function parseUrl(url: string) {
   try {
@@ -167,6 +170,17 @@ export default function ApiTestPage() {
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [history, setHistory] = useState<CallHistoryItem[]>([]);
   const [isSending, setIsSending] = useState(false);
+  // 지금 진행 중인 요청 (취소·시간 초과·화면 이동 때 멈추고, 늦게 온 이전 응답을 가려내는 데 씀)
+  const abortRef = useRef<AbortController | null>(null);
+
+  // 화면을 떠나면 진행 중인 요청을 멈추고 이후 상태 변경은 무시
+  useEffect(
+    () => () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
+    },
+    [],
+  );
 
   const hasBody = method !== "GET";
   const requestBody = hasBody ? body : undefined;
@@ -197,9 +211,43 @@ export default function ApiTestPage() {
     const target = parseUrl(url.trim());
     if (!target || isSending) return;
 
+    const failure = (errorLabel: string, errorMessage: string, startedAt = 0) =>
+      ({
+        status: 0,
+        statusText: "",
+        duration: startedAt ? Math.round(performance.now() - startedAt) : 0,
+        size: 0,
+        body: "",
+        headers: [],
+        errorMessage,
+        errorLabel,
+      }) satisfies ApiResponse;
+
     const requestHeaders: Record<string, string> = {};
     if (apiKey) requestHeaders["X-API-KEY"] = apiKey;
     if (requestBody) requestHeaders["Content-Type"] = "application/json";
+
+    // 한글·줄바꿈처럼 헤더에 쓸 수 없는 값은 보내기 전에 걸러 냄 (네트워크 오류와 구분)
+    let fetchHeaders: Headers;
+    try {
+      fetchHeaders = new Headers(requestHeaders);
+    } catch {
+      setResponse(
+        failure(
+          "입력 오류",
+          "API 키에 쓸 수 없는 문자가 있습니다. 한글이나 줄바꿈이 섞이지 않았는지 확인해주세요.",
+        ),
+      );
+      return;
+    }
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+    let isTimedOut = false;
+    const timer = setTimeout(() => {
+      isTimedOut = true;
+      controller.abort();
+    }, REQUEST_TIMEOUT_MS);
 
     setIsSending(true);
     const startedAt = performance.now();
@@ -207,9 +255,10 @@ export default function ApiTestPage() {
     try {
       const res = await fetch(target.href, {
         method,
-        headers: requestHeaders,
+        headers: fetchHeaders,
         body: requestBody || undefined,
         credentials: "omit",
+        signal: controller.signal,
       });
       const text = await res.text();
       const resHeaders: string[] = [];
@@ -223,17 +272,28 @@ export default function ApiTestPage() {
         headers: resHeaders,
       };
     } catch {
-      result = {
-        status: 0,
-        statusText: "",
-        duration: Math.round(performance.now() - startedAt),
-        size: 0,
-        body: "",
-        headers: [],
-        errorMessage:
+      if (isTimedOut) {
+        result = failure(
+          "시간 초과",
+          `서버가 ${REQUEST_TIMEOUT_MS / 1000}초 안에 응답하지 않았습니다. 잠시 후 다시 시도해주세요.`,
+          startedAt,
+        );
+      } else if (controller.signal.aborted) {
+        result = failure("취소됨", "요청을 취소했습니다.", startedAt);
+      } else {
+        result = failure(
+          "연결 실패",
           "서버에 연결하지 못했습니다. 네트워크 상태나 URL을 확인해주세요. 서버가 이 주소의 요청(CORS)을 허용하지 않을 수도 있습니다.",
-      };
+          startedAt,
+        );
+      }
+    } finally {
+      clearTimeout(timer);
     }
+
+    // 화면을 떠났거나 다른 요청으로 바뀌었으면 이 결과는 버림
+    if (abortRef.current !== controller) return;
+    abortRef.current = null;
 
     setResponse(result);
     setHistory((prev) =>
@@ -251,14 +311,15 @@ export default function ApiTestPage() {
     setIsSending(false);
   };
 
+  // cURL 탭은 오류여도 cURL을 보여줌
   const responseText = !response
     ? "아직 보낸 요청이 없습니다. 보내기를 눌러 응답을 확인하세요."
-    : response.errorMessage
-      ? response.errorMessage
-      : responseTab === "Headers"
-        ? response.headers.join("\n")
-        : responseTab === "cURL"
-          ? curlLines.join("\n")
+    : responseTab === "cURL"
+      ? curlLines.join("\n")
+      : response.errorMessage
+        ? response.errorMessage
+        : responseTab === "Headers"
+          ? response.headers.join("\n")
           : response.body || "(본문 없음)";
 
   const copyText = (text: string) => {
@@ -302,6 +363,11 @@ export default function ApiTestPage() {
         >
           {isSending ? "보내는 중" : "보내기"}
         </SendButton>
+        {isSending && (
+          <CancelButton type="button" onClick={() => abortRef.current?.abort()}>
+            취소
+          </CancelButton>
+        )}
       </RequestBar>
 
       <ApiTestColumns>
@@ -399,7 +465,7 @@ export default function ApiTestPage() {
                     }
                   >
                     {response.status === 0
-                      ? "연결 실패"
+                      ? (response.errorLabel ?? "연결 실패")
                       : `${response.status} ${response.statusText}`.trim()}
                   </Chip>
                   <ResponseMeta>

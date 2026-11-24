@@ -7,7 +7,7 @@ export const HTTP_METHODS: HttpMethod[] = ["GET", "POST", "PATCH", "DELETE"];
 // 키 없이 호출할 수 있는 공개 API(급식)를 기본 요청으로 둠
 export const DEFAULT_REQUEST: { method: HttpMethod; url: string } = {
   method: "GET",
-  url: `${API_BASE_URL}/meals`,
+  url: `${API_BASE_URL.replace(/\/+$/, "")}/meals`,
 };
 
 // 기본 예시(GET /meals)에서 입력받는 쿼리 파라미터 (Swagger MealSearchRequest 기준, 둘 다 비우면 이번 달)
@@ -33,4 +33,6 @@ export interface ApiResponse {
   body: string;
   headers: string[];
   errorMessage?: string;
+  // 응답 칩에 보여줄 오류 이름 (없으면 "연결 실패")
+  errorLabel?: string;
 }

@@ -127,6 +127,26 @@ export const SendButton = styled.button`
   padding: 14px 36px;
 `;
 
+// 보내는 중에만 나오는 취소 버튼 (보내기 버튼과 같은 크기)
+export const CancelButton = styled.button`
+  background: ${Xquare_colors.white};
+  border: ${BORDER};
+  border-radius: 8px;
+  color: ${Xquare_colors.slate[900]};
+  cursor: pointer;
+  flex: 0 0 auto;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 20px;
+  padding: 14px 28px;
+
+  &:hover,
+  &:focus-visible {
+    border-color: ${ACCENT_COLOR};
+    outline: none;
+  }
+`;
+
 export const ApiTestColumns = styled.div`
   display: grid;
   flex: 1;
