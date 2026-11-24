@@ -47,7 +47,13 @@ import {
 } from "./page-style";
 
 // 등록과 수정이 같은 폼을 씀. notice가 있으면 수정 화면
-export function NoticeForm({ notice }: { notice?: Notice }) {
+export function NoticeForm({
+  notice,
+  onSaved,
+}: {
+  notice?: Notice;
+  onSaved?: () => void;
+}) {
   const router = useRouter();
   const id = useId();
   const initialTitle = notice?.title ?? "";
@@ -101,7 +107,10 @@ export function NoticeForm({ notice }: { notice?: Notice }) {
       } else {
         await api.post("/notices", body, { signal: request.signal });
       }
-      if (!request.signal.aborted) goToList();
+      if (!request.signal.aborted) {
+        goToList();
+        onSaved?.();
+      }
     } catch (saveError) {
       if (isAbortError(saveError) || request.signal.aborted) return;
       setError(errorMessage(saveError, "공지를 저장하지 못했습니다."));
@@ -250,12 +259,7 @@ export function NoticeEditForm({ id }: { id: string }) {
           notFound: isNotFoundError(error),
         });
       });
-    return () => {
-      request.abort();
-      // 화면을 떠났다 돌아오면 화면 상태가 남아 있어서, 비우지 않으면 다시 불러오는 동안
-      // 저장 전 내용의 폼이 보이고 그 폼으로 저장할 수 있었음. 다시 불러올 때까지 불러오는 중 화면을 보여 줌
-      setNotice(null);
-    };
+    return () => request.abort();
   }, [id, router, reloadKey]);
 
   // 같은 공지를 다시 불러와도 입력 중인 폼이 초기화되지 않도록 id와 수정일시로 폼을 구분
@@ -264,6 +268,10 @@ export function NoticeEditForm({ id }: { id: string }) {
       <NoticeForm
         key={`${notice.id}-${notice.updatedAt ?? ""}`}
         notice={notice}
+        // 화면 상태가 남아 있어서, 저장한 뒤 다시 들어오면 불러오는 동안 저장 전 내용의 폼이 보이고
+        // 그 폼으로 저장할 수 있었음. 저장했으면 비워서 다시 불러올 때까지 불러오는 중 화면을 보여 줌.
+        // 저장하지 않고 잠깐 나갔다 오는 경우에는 입력 중인 내용을 그대로 둠
+        onSaved={() => setNotice(null)}
       />
     );
   }
