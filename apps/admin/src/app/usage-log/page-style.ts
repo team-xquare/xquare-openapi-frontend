@@ -5,7 +5,8 @@ import { Xquare_colors } from "../../styles/colors";
 const BORDER = `1px solid ${Xquare_colors.slate[200]}`;
 const STRONG_BORDER = `1px solid ${Xquare_colors.slate[400]}`;
 // admin 팔레트에 초록이 없어 성공 응답 색은 이 화면에서만 씁니다.
-const OK_COLOR = "#1A9B5A";
+// 흰 배경 글자 대비 4.5:1 이상(WCAG AA)이 되도록 고른 값 (5.0:1)
+const OK_COLOR = "#0C8048";
 
 const CONTROL = `
   background: ${Xquare_colors.white};
