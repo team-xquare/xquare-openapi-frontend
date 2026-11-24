@@ -56,6 +56,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       if (event.key !== TOKEN_STORAGE_KEY && event.key !== null) return;
       if (!api.auth.isLoggedIn()) resetMyInfo();
       else loadMyInfo(true).catch(() => {});
+      // 실패 화면이 떠 있었어도 확인을 다시 하게 함.
+      // ADMIN이 아니면 권한이 그대로라 위 확인 effect가 다시 돌지 않아서, 로그아웃돼도 실패 화면에 남았음
+      setFailed(false);
+      setAttempt((count) => count + 1);
     };
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);

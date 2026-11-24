@@ -40,7 +40,9 @@ export function useMyInfo() {
 // 받아 둔 정보가 있으면 그대로 쓰고, 없으면(refresh면 항상) /users/me를 부름
 export function loadMyInfo(refresh = false): Promise<MyInfo> {
   if (current && !refresh) return Promise.resolve(current);
-  if (pending) return pending;
+  // refresh면 진행 중인 요청을 기다리지 않음. 그 요청은 바뀌기 전 토큰으로 보냈을 수 있음.
+  // 새 요청을 pending에 넣으면 이전 요청은 끝날 때 결과를 버리고 이 요청을 따름
+  if (pending && !refresh) return pending;
 
   const request: Promise<MyInfo> = api.get<MyInfo>("/users/me").then(
     (info) => {
