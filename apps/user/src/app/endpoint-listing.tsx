@@ -1,11 +1,13 @@
 "use client";
 
 import { Fragment } from "react";
-import type { EndpointGroup } from "./all-content";
+import { ENDPOINT_ACCESS_LABELS, type EndpointGroup } from "./all-content";
 import {
+  AccessBadge,
   EndpointCard,
   EndpointCardLink,
   EndpointDescription,
+  EndpointGroupHeader,
   EndpointGroupSection,
   EndpointList,
   EndpointMethod,
@@ -34,7 +36,14 @@ export function EndpointListing({ groups }: { groups: EndpointGroup[] }) {
       <EndpointList aria-label="엔드포인트 목록">
         {groups.map((group) => (
           <EndpointGroupSection key={group.id} id={group.id}>
-            <h2>{group.title}</h2>
+            <EndpointGroupHeader>
+              <h2>{group.title}</h2>
+              {group.access && (
+                <AccessBadge access={group.access}>
+                  {ENDPOINT_ACCESS_LABELS[group.access]}
+                </AccessBadge>
+              )}
+            </EndpointGroupHeader>
             <div>
               {group.endpoints.map((endpoint, index) => {
                 const card = (
