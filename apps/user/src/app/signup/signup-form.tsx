@@ -81,6 +81,8 @@ export function SignupForm() {
   // 이미 가입된 이메일이거나 가입은 됐는데 로그인 정보를 저장하지 못했으면 마지막 칸 문구를 로그인 링크로 보여줌
   const [loginLinkShown, setLoginLinkShown] = useState(false);
   const [notice, setNotice] = useState("");
+  // 계정은 만들어졌는데 로그인 정보 저장만 실패한 상태. 다시 가입 요청을 보내지 않고 로그인으로만 보냄
+  const [isSignedUp, setIsSignedUp] = useState(false);
 
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   // 진행 중인 요청. 화면을 떠나면 취소해서 숨겨진 화면의 상태를 바꾸지 않게 함
@@ -102,15 +104,16 @@ export function SignupForm() {
     4: !validations.password || !validations.passwordMatch,
   }[step];
 
-  const submitLabel =
-    (pending && PENDING_LABELS[pending]) ??
-    (step === 1
-      ? showVerifyInput
-        ? "인증코드 검증"
-        : "인증코드 발송"
-      : step === LAST_STEP
-        ? "회원가입 완료"
-        : "다음으로");
+  const submitLabel = isSignedUp
+    ? "로그인하러 가기"
+    : ((pending && PENDING_LABELS[pending]) ??
+      (step === 1
+        ? showVerifyInput
+          ? "인증코드 검증"
+          : "인증코드 발송"
+        : step === LAST_STEP
+          ? "회원가입 완료"
+          : "다음으로"));
 
   // 서버 오류를 먼저 보여주고, 없으면 입력값이 규칙에 맞지 않을 때만 형식 오류를 보여줌
   const errorFor = (key: ValidatedField) =>
@@ -145,6 +148,7 @@ export function SignupForm() {
       setServerErrors({});
       setLoginLinkShown(false);
       setNotice("");
+      setIsSignedUp(false);
     };
   }, []);
 
@@ -176,7 +180,8 @@ export function SignupForm() {
   const handleChange =
     (key: keyof SignupFormValues) => (event: ChangeEvent<HTMLInputElement>) => {
       // 요청 중에는 보낸 값과 화면 값이 달라지지 않게 입력을 무시함 (포커스는 그대로 둠)
-      if (isPending) return;
+      // 가입이 끝난 뒤에는 고칠 것이 없으므로 입력을 막아 로그인 링크가 지워지지 않게 함
+      if (isPending || isSignedUp) return;
       let value = event.target.value;
 
       if (key === "email") {
@@ -315,6 +320,7 @@ export function SignupForm() {
 
         // 계정은 이미 만들어져서 다시 시도하면 엉뚱한 오류가 나므로 로그인으로 보냄
         if (code === STORAGE_ERROR) {
+          setIsSignedUp(true);
           setLoginLinkShown(true);
           setServerErrors({ passwordCheck: SIGNED_UP_LOGIN_MESSAGE });
           return;
@@ -325,7 +331,7 @@ export function SignupForm() {
     );
 
   // 이메일 인증을 마친 뒤에는 1단계로 돌아갈 수 없음
-  const canGoBack = step > 1 && !(step === 2 && isEmailVerified);
+  const canGoBack = step > 1 && !(step === 2 && isEmailVerified) && !isSignedUp;
 
   const handlePrev = () => {
     if (!canGoBack || isFading || isPending) return;
@@ -349,7 +355,15 @@ export function SignupForm() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (isNextDisabled || isFading || isPending) return;
+    if (isFading || isPending) return;
+
+    // 가입은 이미 됐으므로 다시 보내지 않고 로그인 화면으로 보냄
+    if (isSignedUp) {
+      router.push("/login");
+      return;
+    }
+
+    if (isNextDisabled) return;
 
     if (step === 1) {
       setServerErrors({});
@@ -506,7 +520,10 @@ export function SignupForm() {
         <AuthLiveMessage role="status">{notice}</AuthLiveMessage>
 
         <AuthFormActions>
-          <Button_square type="submit" disabled={isNextDisabled || isPending}>
+          <Button_square
+            type="submit"
+            disabled={(isNextDisabled && !isSignedUp) || isPending}
+          >
             {submitLabel}
           </Button_square>
 
