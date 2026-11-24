@@ -1,9 +1,20 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { REFERENCE_TIME, USAGE_LOGS } from "./usage-log-content";
+import { useEffect, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { isAbortError } from "../notice-content";
 import {
-  DetailButton,
+  MAX_PAGE_INDEX,
+  createUsageLogRange,
+  fetchUsageLogs,
+  usageLogErrorMessage,
+  type UsageLogPage,
+  type UsageLogQuery,
+} from "./usage-log-content";
+import {
+  AlertBar,
+  CellStatus,
   EmptyCell,
   FilterBar,
   FilterSelect,
@@ -14,119 +25,113 @@ import {
   PageTitle,
   Pager,
   SearchButton,
-  SearchInput,
   Status,
   Total,
   UsagePage,
   UsageTable,
 } from "./page-style";
 
-// API 연동은 backend 사용 기록 조회 API 이후 (OPN-109 연동 / OPN-106).
-// 지금은 목업 데이터에 검색·필터·페이지 이동을 직접 걸어 두었고, API가 나오면 서버 조회로 바꿉니다.
-// 활용신청 내역(apply/page.tsx)과 같은 방식입니다.
-const PAGE_SIZE = 5;
-const DAY = 24 * 60 * 60 * 1000;
-const PERIOD_DAYS: Record<string, number> = { "1d": 1, "7d": 7, "30d": 30 };
-
-// "2026-11-20 13:05:12" 형태를 시각(ms)으로 바꿉니다.
-const toTime = (value: string) => new Date(value.replace(" ", "T")).getTime();
+// 페이지 번호 버튼은 현재 페이지 앞뒤로 이만큼만 보여줌
+const PAGE_BUTTON_RANGE = 2;
 
 export default function UsageLogPage() {
-  const [keyword, setKeyword] = useState("");
-  const [fieldFilter, setFieldFilter] = useState("all");
-  const [codeFilter, setCodeFilter] = useState("all");
-  const [periodFilter, setPeriodFilter] = useState("7d");
-  const [stageFilter, setStageFilter] = useState("all");
-  const [query, setQuery] = useState({
-    keyword: "",
-    field: "all",
-    code: "all",
-    period: "7d",
-    stage: "all",
-  });
-  const [page, setPage] = useState(1);
+  const router = useRouter();
+  const [periodFilter, setPeriodFilter] = useState("1d");
+  const [methodFilter, setMethodFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  // 검색 버튼을 눌러야 적용되는 조건 + 서버 페이지 (0부터)
+  const [query, setQuery] = useState<UsageLogQuery>(() => ({
+    ...createUsageLogRange("1d"),
+    method: "all",
+    status: "all",
+    page: 0,
+  }));
+  // 마지막으로 받아 온 결과와 그때의 조건. 조건(객체)이 바뀌면 새로 받을 때까지 불러오는 중
+  const [loaded, setLoaded] = useState<{
+    query: UsageLogQuery;
+    data: UsageLogPage;
+  } | null>(null);
+  // 오류도 어느 조건에서 난 것인지 함께 둠
+  const [loadError, setLoadError] = useState<{
+    query: UsageLogQuery;
+    message: string;
+  } | null>(null);
+  // 바뀌면 다시 불러옴 (다시 시도)
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const since = toTime(REFERENCE_TIME) - PERIOD_DAYS[query.period] * DAY;
-  const filtered = USAGE_LOGS.filter((log) => {
-    const matchesKeyword =
-      !query.keyword ||
-      log.project.includes(query.keyword) ||
-      log.applicant.includes(query.keyword) ||
-      log.api.includes(query.keyword);
-    const matchesField = query.field === "all" || log.field === query.field;
-    // 응답 문자열 앞자리(2xx, 4xx, 5xx)로 묶습니다.
-    const matchesCode =
-      query.code === "all" || log.status.startsWith(query.code[0]);
-    const matchesPeriod = toTime(log.calledAt) >= since;
-    const matchesStage = query.stage === "all" || log.stage === query.stage;
-    return (
-      matchesKeyword &&
-      matchesField &&
-      matchesCode &&
-      matchesPeriod &&
-      matchesStage
-    );
-  });
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
-  const rows = filtered.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
+  // 다른 화면에서 돌아와 다시 보일 때도 effect가 다시 돌아 받음 (조건은 그대로)
+  useEffect(() => {
+    // 로그인 여부는 저장소를 읽어야 해서 렌더 중이 아니라 effect에서 확인
+    if (!api.auth.isLoggedIn()) {
+      router.replace("/login");
+      return;
+    }
+    const request = new AbortController();
+    fetchUsageLogs(query, request.signal)
+      .then((data) => {
+        setLoaded({ query, data });
+        setLoadError(null);
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error) || request.signal.aborted) return;
+        setLoadError({
+          query,
+          message: usageLogErrorMessage(error, "사용 기록을 불러오지 못했습니다."),
+        });
+      });
+    return () => request.abort();
+  }, [router, query, reloadKey]);
+
+  // 지금 조건의 결과일 때만 표에 보여줌
+  const isCurrent = loaded?.query === query;
+  const rows = isCurrent ? loaded.data.logs : [];
+  const errorText = loadError?.query === query ? loadError.message : "";
+  // 페이지만 넘긴 경우(같은 검색)에는 마지막 건수·페이지 수를 유지해 버튼이 흔들리지 않게 함
+  const sameSearch =
+    loaded !== null &&
+    loaded.query.from === query.from &&
+    loaded.query.to === query.to &&
+    loaded.query.method === query.method &&
+    loaded.query.status === query.status;
+  const data = sameSearch ? loaded.data : undefined;
+  const currentPage = query.page;
+  // 서버가 page를 1000까지만 받음
+  const lastPage = Math.min(
+    Math.max(0, (data?.totalPage ?? 1) - 1),
+    MAX_PAGE_INDEX,
   );
+  const firstButton = Math.max(0, currentPage - PAGE_BUTTON_RANGE);
+  const lastButton = Math.min(lastPage, currentPage + PAGE_BUTTON_RANGE);
+
+  const retry = () => {
+    setLoadError(null);
+    setReloadKey((key) => key + 1);
+  };
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // 필터가 그대로여도 새 객체라 항상 새 기준 시각으로 다시 받음
     setQuery({
-      keyword: keyword.trim(),
-      field: fieldFilter,
-      code: codeFilter,
-      period: periodFilter,
-      stage: stageFilter,
+      ...createUsageLogRange(periodFilter),
+      method: methodFilter,
+      status: statusFilter,
+      page: 0,
     });
-    setPage(1);
   };
+
+  const goPage = (page: number) => setQuery((prev) => ({ ...prev, page }));
 
   return (
     <UsagePage>
       <PageHead>
         <PageTitle>사용 기록</PageTitle>
         <PageDescription>
-          API를 호출할 때마다 기록이 남습니다. 어느 프로젝트의 키로 어떤 API를
-          언제 불렀고 응답이 어땠는지 볼 수 있습니다. 키가 새거나 이상한 호출이
-          보이면 신청자에게 재발급을 안내하세요.
+          API를 호출할 때마다 남는 기록입니다. 호출 시각, 메서드, 경로, 응답 코드,
+          응답 시간을 최신순으로 볼 수 있습니다.
         </PageDescription>
       </PageHead>
 
       <FilterBar role="search" onSubmit={handleSearch}>
-        <SearchInput
-          type="search"
-          value={keyword}
-          placeholder="프로젝트, 신청자 또는 API로 검색"
-          aria-label="프로젝트, 신청자 또는 API 검색"
-          onChange={(event) => setKeyword(event.target.value)}
-        />
-        <FilterSelect
-          aria-label="분야 필터"
-          value={fieldFilter}
-          onChange={(event) => setFieldFilter(event.target.value)}
-        >
-          <option value="all">분야 전체</option>
-          <option value="학생">학생</option>
-          <option value="급식">급식</option>
-          <option value="일정">일정</option>
-          <option value="동아리">동아리</option>
-          <option value="자습 감독">자습 감독</option>
-        </FilterSelect>
-        <FilterSelect
-          aria-label="응답 코드 필터"
-          value={codeFilter}
-          onChange={(event) => setCodeFilter(event.target.value)}
-        >
-          <option value="all">응답 코드 전체</option>
-          <option value="2xx">200번대</option>
-          <option value="4xx">400번대</option>
-          <option value="5xx">500번대</option>
-        </FilterSelect>
         <FilterSelect
           aria-label="기간 필터"
           value={periodFilter}
@@ -137,89 +142,118 @@ export default function UsageLogPage() {
           <option value="30d">최근 30일</option>
         </FilterSelect>
         <FilterSelect
-          aria-label="단계 필터"
-          value={stageFilter}
-          onChange={(event) => setStageFilter(event.target.value)}
+          aria-label="메서드 필터"
+          value={methodFilter}
+          onChange={(event) => setMethodFilter(event.target.value)}
         >
-          <option value="all">단계 전체</option>
-          <option value="test">테스트</option>
-          <option value="prod">운영</option>
+          <option value="all">메서드 전체</option>
+          <option value="GET">GET</option>
+          <option value="POST">POST</option>
+          <option value="PUT">PUT</option>
+          <option value="PATCH">PATCH</option>
+          <option value="DELETE">DELETE</option>
+          <option value="HEAD">HEAD</option>
+          <option value="OPTIONS">OPTIONS</option>
+          <option value="OTHER">기타</option>
+        </FilterSelect>
+        <FilterSelect
+          aria-label="응답 코드 필터"
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value)}
+        >
+          <option value="all">응답 코드 전체</option>
+          {[200, 201, 400, 401, 403, 404, 429, 500].map((code) => (
+            <option key={code} value={String(code)}>
+              {code}
+            </option>
+          ))}
         </FilterSelect>
         <SearchButton type="submit">검색</SearchButton>
       </FilterBar>
 
+      {/* 목록이 이미 보이는데 다시 불러오기가 실패하면 빈 행 자리가 없어 표 위에 알림 */}
+      {errorText && rows.length > 0 && (
+        <AlertBar role="alert">
+          {errorText} 지금 보이는 목록은 최신이 아닐 수 있습니다.
+          <SearchButton type="button" onClick={retry}>
+            다시 시도
+          </SearchButton>
+        </AlertBar>
+      )}
+
       <UsageTable aria-label="사용 기록 목록">
         <thead>
           <tr>
-            <th scope="col">호출한 API</th>
-            <th scope="col">분야</th>
-            <th scope="col">응답</th>
-            <th scope="col">신청자</th>
             <th scope="col">호출 시각</th>
-            <th scope="col">프로젝트 · 키</th>
-            <th scope="col">상세</th>
+            <th scope="col">메서드</th>
+            <th scope="col">경로</th>
+            <th scope="col">응답 코드</th>
+            <th scope="col">응답 시간</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((log) => (
             <tr key={log.id}>
-              <td title={log.api}>{log.api}</td>
-              <td>{log.field}</td>
-              <td title={log.status}>
-                {/* 긴 오류 코드가 단어 중간이 아니라 _ 뒤에서 줄이 바뀌도록 폭 없는 공백을 넣음 */}
-                <Status ok={log.ok}>{log.status.replaceAll("_", "_​")}</Status>
-              </td>
-              <td>{log.applicant}</td>
               <td>{log.calledAt}</td>
-              <td title={log.project}>{log.project}</td>
+              <td>{log.method}</td>
+              <td title={log.route}>{log.route}</td>
               <td>
-                {/* 상세 화면이 아직 없어 누를 수 없게 막아 둡니다. */}
-                <DetailButton
-                  type="button"
-                  disabled
-                  aria-label="상세"
-                  title="준비 중입니다"
-                >
-                  상세
-                </DetailButton>
+                <Status ok={log.status < 400}>{log.status}</Status>
               </td>
+              <td>{log.durationMs}ms</td>
             </tr>
           ))}
           {rows.length === 0 && (
             <tr>
-              <EmptyCell colSpan={7}>검색 결과가 없습니다.</EmptyCell>
+              <EmptyCell colSpan={5}>
+                {errorText ? (
+                  <CellStatus role="alert">
+                    {errorText}
+                    <SearchButton type="button" onClick={retry}>
+                      다시 시도
+                    </SearchButton>
+                  </CellStatus>
+                ) : isCurrent ? (
+                  "기간 안에 사용 기록이 없습니다."
+                ) : (
+                  "사용 기록을 불러오는 중입니다."
+                )}
+              </EmptyCell>
             </tr>
           )}
         </tbody>
       </UsageTable>
 
       <Pager>
-        <Total role="status">전체 {filtered.length}건</Total>
+        <Total role="status">
+          {data ? `전체 ${data.totalCount}건` : "불러오는 중"}
+        </Total>
         <PageList aria-label="페이지">
           <PageButton
             type="button"
-            disabled={currentPage === 1}
-            onClick={() => setPage(currentPage - 1)}
+            disabled={currentPage === 0}
+            onClick={() => goPage(currentPage - 1)}
           >
             이전
           </PageButton>
-          {Array.from({ length: pageCount }, (_, index) => index + 1).map(
-            (pageNumber) => (
-              <PageButton
-                key={pageNumber}
-                type="button"
-                aria-label={`${pageNumber}페이지`}
-                aria-current={pageNumber === currentPage ? "page" : undefined}
-                onClick={() => setPage(pageNumber)}
-              >
-                {pageNumber}
-              </PageButton>
-            ),
-          )}
+          {Array.from(
+            { length: lastButton - firstButton + 1 },
+            (_, index) => firstButton + index,
+          ).map((pageIndex) => (
+            <PageButton
+              key={pageIndex}
+              type="button"
+              aria-label={`${pageIndex + 1}페이지`}
+              aria-current={pageIndex === currentPage ? "page" : undefined}
+              onClick={() => goPage(pageIndex)}
+            >
+              {pageIndex + 1}
+            </PageButton>
+          ))}
           <PageButton
             type="button"
-            disabled={currentPage === pageCount}
-            onClick={() => setPage(currentPage + 1)}
+            disabled={currentPage >= lastPage}
+            onClick={() => goPage(currentPage + 1)}
           >
             다음
           </PageButton>
