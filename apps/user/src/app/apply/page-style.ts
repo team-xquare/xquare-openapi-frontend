@@ -56,6 +56,11 @@ export const ApplyBadge = styled.span`
   padding: 2px 12px;
 `;
 
+export const ApplyRestrictedBadge = styled(ApplyBadge)`
+  background: #fff0db;
+  color: #c46700;
+`;
+
 export const ApplyForm = styled.form`
   display: flex;
   flex: 1;
@@ -103,6 +108,18 @@ export const FieldLabel = styled.label`
   line-height: 1.5;
 `;
 
+export const TextareaFieldRow = styled(FieldRow)`
+  align-items: flex-end;
+
+  label {
+    padding-bottom: 4px;
+  }
+
+  @media (max-width: 560px) {
+    align-items: stretch;
+  }
+`;
+
 export const FieldInput = styled.input`
   background: transparent;
   border: 0;
@@ -116,6 +133,38 @@ export const FieldInput = styled.input`
   padding: 4px 0;
   text-align: right;
   width: min(60%, 420px);
+
+  &::placeholder {
+    color: ${Xquare_colors.gray[400]};
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    box-shadow: 0 1px 0 ${Xquare_colors.blue[500]};
+  }
+
+  @media (max-width: 560px) {
+    text-align: left;
+    width: 100%;
+  }
+`;
+
+export const FieldTextarea = styled.textarea`
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: ${Xquare_colors.slate[900]};
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  min-height: 48px;
+  min-width: 0;
+  outline: none;
+  padding: 4px 0;
+  resize: vertical;
+  text-align: right;
+  width: min(60%, 720px);
 
   &::placeholder {
     color: ${Xquare_colors.gray[400]};

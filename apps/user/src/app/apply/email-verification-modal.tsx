@@ -18,7 +18,7 @@ import {
 } from "./email-verification-modal-style";
 
 interface EmailVerificationModalProps {
-  category: "club" | "schedule";
+  category: "club" | "schedule" | "restricted";
   onClose: () => void;
   onVerify: () => void;
 }
@@ -32,7 +32,8 @@ export function EmailVerificationModal({
   const id = useId();
   const [code, setCode] = useState("");
   const [secondsLeft, setSecondsLeft] = useState(300);
-  const categoryLabel = category === "club" ? "동아리" : "일정";
+  const categoryLabel =
+    category === "club" ? "동아리" : category === "schedule" ? "일정" : "제한";
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -71,8 +72,9 @@ export function EmailVerificationModal({
       <ModalDescription id={`${id}-description`}>
         jae******@dsm.hs.kr로 6자리 인증 코드를 보냈습니다.
         <br />
-        코드를 확인하면 {categoryLabel} 분야가 바로 승인되어 이 프로젝트의 키로
-        쓸 수 있습니다.
+        {category === "restricted"
+          ? "코드를 확인하면 신청이 접수되고, 관리자 승인 후 이 프로젝트의 키로 쓸 수 있습니다."
+          : `코드를 확인하면 ${categoryLabel} 분야가 바로 승인되어 이 프로젝트의 키로 쓸 수 있습니다.`}
       </ModalDescription>
 
       <CodeInputWrap>
