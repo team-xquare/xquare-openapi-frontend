@@ -1,52 +1,109 @@
-export interface Notice {
+import { ApiError } from "@xquare/api";
+import { api } from "@/lib/api";
+import type { ErrorStatus } from "./error-content";
+
+export interface NoticeSummary {
   id: string;
   title: string;
   author: string;
   createdAt: string;
   updatedAt?: string;
+}
+
+export interface Notice extends NoticeSummary {
   content: string;
 }
 
-// 최신순 정렬
-export const NOTICES: Notice[] = [
-  {
-    id: "5",
-    title: "9월 급식 변경 안내",
-    author: "김영희",
-    createdAt: "2026-09-03 08:30",
-    content:
-      "9월 급식 식단이 일부 변경되었습니다.\n\n변경된 식단은 급식 엔드포인트에서 확인할 수 있습니다.",
-  },
-  {
-    id: "4",
-    title: "2학기 동아리 모집 안내",
-    author: "홍길동",
-    createdAt: "2026-09-01 09:00",
-    updatedAt: "2026-09-01 10:30",
-    content:
-      "9월 15일까지 각 동아리 부장에게 신청서를 제출하세요.\n\n신청서는 교무실 앞 비치함에서 가져갈 수 있습니다.\n중복 지원은 불가하며, 면접 일정은 추후 공지합니다.",
-  },
-  {
-    id: "3",
-    title: "체육대회 일정 공지",
-    author: "이진경",
-    createdAt: "2026-08-28 14:00",
-    content:
-      "체육대회는 9월 26일 운동장에서 진행됩니다.\n\n세부 종목과 반별 일정은 담임 선생님을 통해 안내합니다.",
-  },
-  {
-    id: "2",
-    title: "기숙사 점호 시간 변경",
-    author: "정은진",
-    createdAt: "2026-08-25 17:00",
-    content: "9월부터 기숙사 저녁 점호 시간이 22시 30분으로 변경됩니다.",
-  },
-  {
-    id: "1",
-    title: "9월 자습 감독 배정",
-    author: "홍길동",
-    createdAt: "2026-08-20 10:00",
-    content:
-      "9월 자습 감독 배정표가 확정되었습니다.\n\n배정 내역은 자습감독 엔드포인트에서 확인할 수 있습니다.",
-  },
-];
+export interface NoticePage {
+  notices: NoticeSummary[];
+  // 0부터 셈
+  page: number;
+  totalCount: number;
+  totalPage: number;
+}
+
+// 공지 API 응답 (GET /notices, GET /notices/{noticeId}). 조회도 로그인 토큰이 필요함
+interface NoticeSummaryResponse {
+  id: number;
+  title: string;
+  // 작성자 계정이 지워졌으면 null
+  author: string | null;
+  // 서울 시각 "2026-09-01T09:00:00"
+  createdAt: string;
+  // 수정된 적이 없으면 null
+  updatedAt: string | null;
+}
+
+interface NoticeDetailResponse extends NoticeSummaryResponse {
+  content: string;
+}
+
+interface NoticeListResponse {
+  notices: NoticeSummaryResponse[];
+  page: number;
+  size: number;
+  totalCount: number;
+  totalPage: number;
+}
+
+// "2026-09-01T09:00:00" → "2026-09-01 09:00"
+const formatDateTime = (value: string) => value.slice(0, 16).replace("T", " ");
+
+function toNoticeSummary(response: NoticeSummaryResponse): NoticeSummary {
+  return {
+    id: String(response.id),
+    title: response.title,
+    author: response.author ?? "알 수 없음",
+    createdAt: formatDateTime(response.createdAt),
+    updatedAt: response.updatedAt ? formatDateTime(response.updatedAt) : undefined,
+  };
+}
+
+// 토큰이 없으면 요청해도 401이라 보내지 않고 바로 로그인 필요로 끝냄
+function ensureLoggedIn() {
+  if (!api.auth.isLoggedIn()) {
+    throw new ApiError(401, "INVALID_TOKEN", "로그인이 필요합니다.");
+  }
+}
+
+// 최신순 목록 한 페이지
+export async function fetchNoticePage(
+  page: number,
+  size: number,
+  signal?: AbortSignal,
+): Promise<NoticePage> {
+  ensureLoggedIn();
+  const response = await api.get<NoticeListResponse>(
+    `/notices?page=${page}&size=${size}`,
+    { signal },
+  );
+  return {
+    notices: response.notices.map(toNoticeSummary),
+    page: response.page,
+    totalCount: response.totalCount,
+    totalPage: response.totalPage,
+  };
+}
+
+export async function fetchNotice(id: string, signal?: AbortSignal): Promise<Notice> {
+  ensureLoggedIn();
+  const response = await api.get<NoticeDetailResponse>(
+    `/notices/${encodeURIComponent(id)}`,
+    { signal },
+  );
+  return { ...toNoticeSummary(response), content: response.content };
+}
+
+export const isAbortError = (error: unknown) =>
+  error instanceof Error && error.name === "AbortError";
+
+// 예외 페이지(ErrorView)로 보여 줄 상태 코드. 그 밖의 오류는 500 화면(다시 시도)
+export function toErrorStatus(error: unknown): ErrorStatus {
+  if (error instanceof ApiError) {
+    const { status } = error;
+    if (status === 401 || status === 403 || status === 404 || status === 429) {
+      return status;
+    }
+  }
+  return 500;
+}

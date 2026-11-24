@@ -1,9 +1,23 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, type FormEvent } from "react";
-import { NOTICES, type Notice } from "../notice-content";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import {
+  errorMessage,
+  fetchAllNotices,
+  isAbortError,
+  type NoticeSummary,
+} from "../notice-content";
 import { DeleteNoticeModal } from "./delete-notice-modal";
 import {
+  CellStatus,
   EmptyCell,
   NoticePage,
   NoticeTable,
@@ -28,13 +42,37 @@ import {
 const PAGE_SIZE = 10;
 
 export default function NoticeListPage() {
-  // API 연동 전이라 삭제는 화면의 더미 목록에서만 빠짐
-  const [notices, setNotices] = useState(NOTICES);
+  const router = useRouter();
+  // 처음 불러오기 전에는 null
+  const [notices, setNotices] = useState<NoticeSummary[] | null>(null);
+  const [loadError, setLoadError] = useState("");
+  // 바뀌면 목록을 다시 불러옴 (다시 시도 · 삭제 후)
+  const [reloadKey, setReloadKey] = useState(0);
   const [keyword, setKeyword] = useState("");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
-  const [deleteTarget, setDeleteTarget] = useState<Notice | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<NoticeSummary | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // 다른 화면에서 돌아와 다시 보일 때도 effect가 다시 돌아 최신 목록을 받음
+  useEffect(() => {
+    // 로그인 여부는 저장소를 읽어야 해서 렌더 중이 아니라 effect에서 확인
+    if (!api.auth.isLoggedIn()) {
+      router.replace("/login");
+      return;
+    }
+    const request = new AbortController();
+    fetchAllNotices(request.signal)
+      .then((list) => {
+        setNotices(list);
+        setLoadError("");
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error) || request.signal.aborted) return;
+        setLoadError(errorMessage(error, "공지 목록을 불러오지 못했습니다."));
+      });
+    return () => request.abort();
+  }, [router, reloadKey]);
 
   // 다른 페이지로 이동해도 화면이 숨겨진 채 상태가 남으므로,
   // 열려 있던 삭제 모달이 돌아왔을 때 배경 없이 남지 않도록 숨겨질 때 닫음
@@ -42,7 +80,7 @@ export default function NoticeListPage() {
     return () => setDeleteTarget(null);
   }, []);
 
-  const filtered = notices.filter((notice) => notice.title.includes(query));
+  const filtered = (notices ?? []).filter((notice) => notice.title.includes(query));
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   // 삭제로 마지막 페이지가 비면 그 앞 페이지를 보여줌
   const currentPage = Math.min(page, pageCount);
@@ -123,7 +161,26 @@ export default function NoticeListPage() {
           {rows.length === 0 && (
             <tr>
               <EmptyCell colSpan={5}>
-                {query ? "검색 결과가 없습니다." : "등록된 공지가 없습니다."}
+                {loadError ? (
+                  <CellStatus role="alert">
+                    {loadError}
+                    <SecondaryButton
+                      type="button"
+                      onClick={() => {
+                        setLoadError("");
+                        setReloadKey((key) => key + 1);
+                      }}
+                    >
+                      다시 시도
+                    </SecondaryButton>
+                  </CellStatus>
+                ) : notices === null ? (
+                  "공지 목록을 불러오는 중입니다."
+                ) : query ? (
+                  "검색 결과가 없습니다."
+                ) : (
+                  "등록된 공지가 없습니다."
+                )}
               </EmptyCell>
             </tr>
           )}
@@ -165,12 +222,14 @@ export default function NoticeListPage() {
 
       {deleteTarget && (
         <DeleteNoticeModal
-          title={deleteTarget.title}
+          notice={deleteTarget}
           onClose={() => setDeleteTarget(null)}
-          onConfirm={() => {
+          onDeleted={() => {
+            // 지운 행은 바로 빼고, 그 사이 바뀐 내용까지 맞추도록 목록을 다시 받음
             setNotices((prev) =>
-              prev.filter((notice) => notice.id !== deleteTarget.id),
+              prev && prev.filter((notice) => notice.id !== deleteTarget.id),
             );
+            setReloadKey((key) => key + 1);
             // 지운 행의 삭제 버튼이 사라져 포커스가 갈 곳이 없으므로 검색창으로 옮김
             searchInputRef.current?.focus();
           }}

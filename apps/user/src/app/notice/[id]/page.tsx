@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import { notFound } from "next/navigation";
-import { NOTICES } from "../../notice-content";
-import { NoticeArticle, NoticeDetailFrame } from "./notice-detail";
+import { NoticeDetail } from "./notice-detail";
 
+// 공지는 브라우저에서 불러와서 빌드할 때 아는 id가 없음. Cache Components는 id가 하나 이상
+// 있어야 빌드되므로 없는 id(0, 서버 id는 1부터)로 공통 화면 틀만 미리 그림
 export function generateStaticParams() {
-  return NOTICES.map((notice) => ({ id: notice.id }));
+  return [{ id: "0" }];
 }
 
 export default function NoticeDetailPage({
@@ -13,30 +13,18 @@ export default function NoticeDetailPage({
   params: Promise<{ id: string }>;
 }) {
   return (
-    <NoticeDetailFrame>
-      <Suspense>
-        <NoticeContent params={params} />
-      </Suspense>
-    </NoticeDetailFrame>
+    <Suspense>
+      <NoticeContent params={params} />
+    </Suspense>
   );
 }
 
+// 공지는 로그인 토큰으로 브라우저에서 불러오므로 서버에서는 id만 넘김
 async function NoticeContent({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const index = NOTICES.findIndex((notice) => notice.id === id);
-
-  if (index === -1) notFound();
-
-  // 목록이 최신순이라 이전글은 바로 뒤, 다음글은 바로 앞 항목
-  return (
-    <NoticeArticle
-      notice={NOTICES[index]}
-      prev={NOTICES[index + 1]}
-      next={NOTICES[index - 1]}
-    />
-  );
+  return <NoticeDetail key={id} id={id} />;
 }

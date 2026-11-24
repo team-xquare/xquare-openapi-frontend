@@ -67,9 +67,60 @@ export const NoticeTitleLink = styled(Link)`
   }
 `;
 
+// 불러오는 중이거나 공지가 없을 때 표 아래에 보이는 문구
+export const NoticeTableMessage = styled.p`
+  border-bottom: 1px solid #e1e4e8;
+  color: #7b8494;
+  font-size: 14px;
+  margin: 0;
+  padding: 16px 14px;
+  text-align: center;
+`;
+
+// 건수 · 페이지는 왼쪽, 이전 · 다음 버튼은 오른쪽
+export const NoticePager = styled.div`
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 18px;
+`;
+
 export const NoticePageCount = styled.p`
   color: #7b8494;
   font-size: 12px;
   line-height: 1.5;
-  margin: 18px 0 0;
+  margin: 0;
+`;
+
+export const NoticePagerButtons = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+export const NoticePagerButton = styled.button`
+  background: #fff;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  color: #111;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  height: 30px;
+  padding: 0 12px;
+
+  &:hover:not(:disabled) {
+    border-color: #9650fa;
+    color: #9650fa;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #9650fa;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
 `;
