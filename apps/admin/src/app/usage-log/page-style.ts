@@ -62,17 +62,6 @@ export const FilterBar = styled.form`
   margin-bottom: 20px;
 `;
 
-export const SearchInput = styled.input`
-  ${CONTROL}
-  flex: 1 1 240px;
-  min-width: 240px;
-  padding: 0 16px;
-
-  &::placeholder {
-    color: ${Xquare_colors.slate[400]};
-  }
-`;
-
 export const FilterSelect = styled.select`
   ${CONTROL}
   cursor: pointer;
@@ -144,27 +133,6 @@ export const UsageTable = styled.table`
 export const Status = styled.span<{ ok: boolean }>`
   color: ${({ ok }) => (ok ? OK_COLOR : Xquare_colors.red[600])};
   font-weight: 700;
-`;
-
-export const DetailButton = styled.button`
-  appearance: none;
-  background: transparent;
-  border: 0;
-  color: ${Xquare_colors.purple[400]};
-  cursor: pointer;
-  font: inherit;
-  font-size: 15px;
-  padding: 8px 0;
-
-  &:focus-visible {
-    outline: 2px solid ${Xquare_colors.purple[400]};
-    outline-offset: 3px;
-  }
-
-  &:disabled {
-    color: ${Xquare_colors.slate[400]};
-    cursor: not-allowed;
-  }
 `;
 
 // 목록 위에 띄우는 불러오기 실패 알림
