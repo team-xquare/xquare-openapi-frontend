@@ -54,6 +54,7 @@ export const PageDescription = styled.p`
 export const FilterBar = styled.form`
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 20px;
 `;
@@ -72,7 +73,8 @@ export const FilterSelect = styled.select`
   ${CONTROL}
   cursor: pointer;
   padding: 0 38px 0 16px;
-  width: 208px;
+  /* "첫 신청 (키 발급)"처럼 긴 옵션도 잘리지 않는 폭 */
+  width: 184px;
 `;
 
 export const SearchButton = styled.button`
@@ -99,24 +101,30 @@ export const ApplicationTable = styled.table`
     font-size: 14px;
     font-weight: 700;
     height: 56px;
-    padding: 0 20px;
+    padding: 0 12px;
     text-align: left;
   }
 
   th:nth-of-type(1) {
-    width: 43%;
+    width: 24%;
   }
   th:nth-of-type(2) {
-    width: 12%;
+    width: 7%;
   }
   th:nth-of-type(3) {
-    width: 15%;
+    width: 12%;
   }
   th:nth-of-type(4) {
-    width: 15%;
+    width: 10%;
   }
   th:nth-of-type(5) {
-    width: 15%;
+    width: 19%;
+  }
+  th:nth-of-type(6) {
+    width: 18%;
+  }
+  th:nth-of-type(7) {
+    width: 10%;
   }
 
   td {
@@ -125,10 +133,31 @@ export const ApplicationTable = styled.table`
     font-size: 15px;
     height: 66px;
     overflow: hidden;
-    padding: 0 20px;
+    padding: 0 12px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+`;
+
+// 단계: 제한은 주황, 교내는 회색
+export const TierText = styled.span<{ $tier: "제한" | "교내" }>`
+  color: ${({ $tier }) =>
+    $tier === "제한"
+      ? Xquare_colors.orange[600]
+      : Xquare_colors.slate[600]};
+`;
+
+// 상태: 승인 대기는 주황 굵게, 반려는 빨강, 승인 완료는 초록
+export const StatusText = styled.span<{
+  $status: "승인 대기" | "반려" | "승인 완료";
+}>`
+  color: ${({ $status }) =>
+    $status === "승인 대기"
+      ? Xquare_colors.orange[600]
+      : $status === "반려"
+        ? Xquare_colors.red[600]
+        : Xquare_colors.green[700]};
+  font-weight: ${({ $status }) => ($status === "승인 대기" ? 700 : 400)};
 `;
 
 export const DetailButton = styled.button`
