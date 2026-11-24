@@ -17,6 +17,7 @@ const PRIMARY_ITEMS = [
   { label: "홈", href: "/" },
   { label: "공지", href: "/notice" },
   { label: "활용신청", href: "/apply" },
+  { label: "사용 기록", href: "/usage-log" },
 ];
 
 const DATA_ITEMS = [
