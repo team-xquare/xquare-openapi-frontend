@@ -75,8 +75,10 @@ export const SearchInput = styled.input`
 export const FilterSelect = styled.select`
   ${CONTROL}
   cursor: pointer;
+  flex: none;
   padding: 0 38px 0 16px;
-  width: 140px;
+  /* "응답 코드 전체" 같은 가장 긴 옵션이 잘리지 않는 폭 */
+  width: 176px;
 `;
 
 export const SearchButton = styled.button`
@@ -160,6 +162,11 @@ export const DetailButton = styled.button`
   &:focus-visible {
     outline: 2px solid ${Xquare_colors.purple[400]};
     outline-offset: 3px;
+  }
+
+  &:disabled {
+    color: ${Xquare_colors.slate[400]};
+    cursor: not-allowed;
   }
 `;
 
