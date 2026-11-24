@@ -19,6 +19,14 @@ const FOCUS_RING = `
   }
 `;
 
+// 저장 · 삭제 중에 막힌 버튼은 공지 화면 버튼처럼 흐리게 보임
+const DISABLED = `
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+`;
+
 const TEXT_BUTTON = `
   appearance: none;
   background: transparent;
@@ -27,6 +35,7 @@ const TEXT_BUTTON = `
   font: inherit;
   padding: 0;
   ${FOCUS_RING}
+  ${DISABLED}
 `;
 
 export const FilterBar = styled.form`
@@ -90,6 +99,10 @@ export const Select = styled.select`
   &:focus {
     border-color: ${Xquare_colors.purple[400]};
     outline: none;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
   }
 `;
 
@@ -286,6 +299,11 @@ export const ResultEmpty = styled.li`
   padding: 14px 12px;
 `;
 
+// 학생 검색 실패 문구
+export const ResultError = styled(ResultEmpty)`
+  color: ${Xquare_colors.red[600]};
+`;
+
 export const MemberHead = styled.div`
   align-items: center;
   display: flex;
@@ -382,6 +400,7 @@ export const LeaderRadio = styled.input`
   }
 
   ${FOCUS_RING}
+  ${DISABLED}
 `;
 
 export const LeaderBadge = styled.span`
@@ -496,4 +515,5 @@ export const ModalDangerButton = styled.button`
   justify-content: center;
   padding: 0 20px;
   ${FOCUS_RING}
+  ${DISABLED}
 `;

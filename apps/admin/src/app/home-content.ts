@@ -69,7 +69,8 @@ export const HOME_ISSUES: HomeIssue[] = [
     title: "동아리 DAUS 담당 선생님 미지정",
     description: "동아리 수정에서 담당 선생님을 지정하세요.",
     actionLabel: "지정",
-    href: "/club/daus/edit",
+    // 동아리 수정 주소가 서버 id라서 홈 API 연동 전까지는 동아리 목록으로 보냄
+    href: "/club",
   },
 ];
 
