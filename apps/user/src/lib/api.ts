@@ -1,7 +1,7 @@
 import { createApiClient, createLocalTokenStorage } from "@xquare/api";
 
 // 서버 주소. 값이 없으면 스테이징 서버를 씀 (운영 서버는 아직 준비 중)
-const API_BASE_URL =
+export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://openapi-backend-stag.dsmhs.kr";
 
 export const api = createApiClient({

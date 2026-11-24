@@ -321,6 +321,10 @@ const CHIP_TONES = {
     background: Xquare_colors.green[100],
     color: Xquare_colors.green[500],
   },
+  red: {
+    background: Xquare_colors.red[100],
+    color: Xquare_colors.red[600],
+  },
   blue: { background: Xquare_colors.blue[100], color: ACCENT_COLOR },
   purple: {
     background: Xquare_colors.purple[100],
