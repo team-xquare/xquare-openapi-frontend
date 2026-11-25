@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Modal } from "../../../components/modal";
 import { EmailVerificationModal } from "../email-verification-modal";
 import {
   ApplyBadge,
@@ -69,6 +70,7 @@ export default function IntermediateApplyPage() {
   const [project, setProject] = useState("team-xquare");
   const [purpose, setPurpose] = useState("");
   const [serviceUrl, setServiceUrl] = useState("TEST.TEST.COM");
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
 
   const canSubmit =
@@ -80,7 +82,11 @@ export default function IntermediateApplyPage() {
     event.preventDefault();
     if (!canSubmit) return;
 
-    setIsVerificationOpen(true);
+    if (config.restricted) {
+      setIsConfirmOpen(true);
+    } else {
+      setIsVerificationOpen(true);
+    }
   };
 
   return (
@@ -88,7 +94,9 @@ export default function IntermediateApplyPage() {
       <ApplyHeader>
         <ApplyTitle>{config.title}</ApplyTitle>
         {config.restricted ? (
-          <ApplyRestrictedBadge>제한 API · 관리자 승인 필요</ApplyRestrictedBadge>
+          <ApplyRestrictedBadge>
+            제한 API · 관리자 승인 필요
+          </ApplyRestrictedBadge>
         ) : (
           <ApplyBadge>중간 API · 자동 승인</ApplyBadge>
         )}
@@ -161,6 +169,29 @@ export default function IntermediateApplyPage() {
           완료 <span aria-hidden="true">→</span>
         </CompleteButton>
       </ApplyForm>
+      {isConfirmOpen && (
+        <Modal
+          title="이 내용으로 신청할까요?"
+          description={
+            <>
+              {config.title.replace(" 활용신청", "")} · 제한 API · 프로젝트{" "}
+              {project}
+              <br />
+              신청하기를 누르면 학교 이메일로 인증 코드를 보냅니다.
+              <br />
+              인증하면 신청이 접수되고, 관리자가 승인하면 이 프로젝트 키로 쓸 수
+              있습니다.
+            </>
+          }
+          confirmLabel="신청하기"
+          cancelLabel="다시 확인"
+          onClose={() => setIsConfirmOpen(false)}
+          onConfirm={() => {
+            setIsConfirmOpen(false);
+            setIsVerificationOpen(true);
+          }}
+        />
+      )}
       {isVerificationOpen && (
         <EmailVerificationModal
           category={
@@ -173,7 +204,7 @@ export default function IntermediateApplyPage() {
           onClose={() => setIsVerificationOpen(false)}
           onVerify={() =>
             router.push(
-              `/apply/success?serviceName=${encodeURIComponent(project.trim())}&category=${category}&firstApproval=${String(project === "new-project")}`,
+              `/apply/success?serviceName=${encodeURIComponent(project.trim())}&category=${category}&purpose=${encodeURIComponent(purpose.trim())}&firstApproval=${String(project === "new-project")}`,
             )
           }
         />

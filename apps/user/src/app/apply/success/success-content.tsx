@@ -16,6 +16,7 @@ import {
   PrimaryLink,
   SecondaryLink,
   HistoryButton,
+  PendingStatus,
 } from "./page-style";
 
 // API 연동 전 퍼블리싱용 신청 결과
@@ -28,6 +29,7 @@ export function ApplySuccessContent() {
   const searchParams = useSearchParams();
   const serviceName = searchParams.get("serviceName")?.trim() || "team-xquare";
   const category = searchParams.get("category");
+  const purpose = searchParams.get("purpose")?.trim() || "-";
   const isFirstApproval = searchParams.get("firstApproval") === "true";
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">(
     "idle",
@@ -41,6 +43,88 @@ export function ApplySuccessContent() {
       setCopyStatus("error");
     }
   };
+
+  if (["student", "teacher", "supervisor"].includes(category ?? "")) {
+    const restrictedConfig = {
+      student: {
+        label: "학생",
+        api: "학생 (GET /students, GET /students/{studentId})",
+        document: "/student",
+      },
+      teacher: {
+        label: "교직원",
+        api: "교직원 조회 API",
+        document: "/teacher",
+      },
+      supervisor: {
+        label: "자습감독",
+        api: "자습감독 조회 API",
+        document: "/supervisor",
+      },
+    }[category as "student" | "teacher" | "supervisor"];
+
+    return (
+      <SuccessPage>
+        <header>
+          <SuccessTitle>활용신청이 접수되었습니다</SuccessTitle>
+          <SuccessLead>
+            {restrictedConfig.label} 분야 · 제한 API · 관리자 승인 대기
+          </SuccessLead>
+        </header>
+
+        <ApplicationDetails aria-label="제한 API 활용신청 결과">
+          <DetailRow>
+            <dt>신청 분야</dt>
+            <dd>{restrictedConfig.api}</dd>
+          </DetailRow>
+          <DetailRow>
+            <dt>프로젝트</dt>
+            <dd>{serviceName}</dd>
+          </DetailRow>
+          <DetailRow>
+            <dt>사용 목적</dt>
+            <dd>{purpose}</dd>
+          </DetailRow>
+          <DetailRow>
+            <dt>상태</dt>
+            <dd>
+              <PendingStatus>
+                승인 대기 — 관리자가 승인하면 호출 가능
+              </PendingStatus>
+            </dd>
+          </DetailRow>
+          <DetailRow>
+            <dt>신청일시</dt>
+            <dd>2026-11-19 16:40</dd>
+          </DetailRow>
+          <DetailRow>
+            <dt>승인 결과</dt>
+            <dd>
+              마이페이지 · 신청한 분야에서 확인 (반려되면 사유가 함께
+              표시됩니다)
+            </dd>
+          </DetailRow>
+        </ApplicationDetails>
+
+        <KeyPanel>
+          <ApiKey>xq_test_8f3a••••a0c9</ApiKey>
+        </KeyPanel>
+        <KeyNotice>
+          승인되기 전에 이 키로 {restrictedConfig.label} API를 부르면 403이
+          납니다. 승인되면 새 키 없이 이 프로젝트의 키로 바로 호출할 수
+          있습니다. 개인정보가 들어간 데이터라 학교 검토가 끝나야 승인될 수
+          있습니다.
+        </KeyNotice>
+
+        <SuccessActions>
+          <PrimaryLink href="/mypage">내 신청 내역</PrimaryLink>
+          <SecondaryLink href={restrictedConfig.document}>
+            문서로 돌아가기
+          </SecondaryLink>
+        </SuccessActions>
+      </SuccessPage>
+    );
+  }
 
   if (category === "club" || category === "schedule") {
     const isClub = category === "club";
