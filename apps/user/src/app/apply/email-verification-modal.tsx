@@ -19,12 +19,16 @@ import {
 
 interface EmailVerificationModalProps {
   category: "club" | "schedule" | "restricted";
+  mode?: "apply" | "reissue";
+  projectName?: string;
   onClose: () => void;
   onVerify: () => void;
 }
 
 export function EmailVerificationModal({
   category,
+  mode = "apply",
+  projectName,
   onClose,
   onVerify,
 }: EmailVerificationModalProps) {
@@ -72,9 +76,11 @@ export function EmailVerificationModal({
       <ModalDescription id={`${id}-description`}>
         jae******@dsm.hs.kr로 6자리 인증 코드를 보냈습니다.
         <br />
-        {category === "restricted"
-          ? "코드를 확인하면 신청이 접수되고, 관리자 승인 후 이 프로젝트의 키로 쓸 수 있습니다."
-          : `코드를 확인하면 ${categoryLabel} 분야가 바로 승인되어 이 프로젝트의 키로 쓸 수 있습니다.`}
+        {mode === "reissue"
+          ? `확인하면 ${projectName ?? "프로젝트"}의 새 키가 발급되고 지금 키는 바로 중지됩니다.`
+          : category === "restricted"
+            ? "코드를 확인하면 신청이 접수되고, 관리자 승인 후 이 프로젝트의 키로 쓸 수 있습니다."
+            : `코드를 확인하면 ${categoryLabel} 분야가 바로 승인되어 이 프로젝트의 키로 쓸 수 있습니다.`}
       </ModalDescription>
 
       <CodeInputWrap>
@@ -105,7 +111,7 @@ export function EmailVerificationModal({
           disabled={code.length !== 6}
           onClick={() => close("confirm")}
         >
-          인증하고 바로 사용
+          {mode === "reissue" ? "인증하고 재발급" : "인증하고 바로 사용"}
         </PrimaryButton>
         <SecondaryButton
           type="button"

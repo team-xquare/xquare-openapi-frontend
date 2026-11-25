@@ -11,7 +11,7 @@ export const ModalDialog = styled.dialog`
   max-height: calc(100dvh - 40px);
   max-width: calc(100vw - 40px);
   padding: 34px 40px 28px;
-  text-align: center;
+  text-align: left;
   width: 480px;
 
   &::backdrop {
@@ -28,6 +28,7 @@ export const ModalTitle = styled.h2`
   font-weight: 700;
   line-height: 1.4;
   margin: 0 0 12px;
+  text-align: left;
 `;
 
 // align을 안 주면 모달 정렬을 그대로 따름 (문의하기 모달)
@@ -35,7 +36,7 @@ export const ModalDescription = styled.p<{ align?: "left" | "center" }>`
   color: ${Xquare_colors.gray[600]};
   font-size: 14px;
   font-weight: 400;
-  line-height: 1.3;
+  line-height: 1.5;
   margin: 0;
   text-align: ${(props) => props.align ?? "inherit"};
   word-break: keep-all;
@@ -44,7 +45,7 @@ export const ModalDescription = styled.p<{ align?: "left" | "center" }>`
 export const ModalActions = styled.form`
   display: flex;
   gap: 12px;
-  justify-content: center;
+  justify-content: flex-start;
   margin-top: 30px;
 `;
 

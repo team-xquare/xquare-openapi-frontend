@@ -20,6 +20,7 @@ import {
 } from "./project-selector-style";
 import styled from "@emotion/styled";
 import { Xquare_colors } from "../../styles/colors";
+import { addStoredProject, getStoredProjects } from "./project-storage";
 
 interface ProjectSelectorProps {
   value: string;
@@ -71,7 +72,7 @@ const CreateProjectActions = styled.div`
   margin-top: 24px;
 `;
 
-function CreateProjectModal({
+export function CreateProjectModal({
   onClose,
   onCreate,
 }: {
@@ -137,6 +138,19 @@ export function ProjectSelector({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [projects, setProjects] = useState([...PROJECTS]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const storedProjects = getStoredProjects();
+      setProjects((current) => [
+        ...current,
+        ...storedProjects
+          .filter((name) => !current.some((project) => project.name === name))
+          .map((name) => ({ name, description: "키 없음 · 분야 신청 필요" })),
+      ]);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   return (
     <>
       <ProjectSelectorWrap>
@@ -191,6 +205,7 @@ export function ProjectSelector({
         <CreateProjectModal
           onClose={() => setIsCreateOpen(false)}
           onCreate={(name) => {
+            addStoredProject(name);
             setProjects((current) =>
               current.some((project) => project.name === name)
                 ? current

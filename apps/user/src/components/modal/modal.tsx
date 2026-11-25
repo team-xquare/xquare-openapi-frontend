@@ -25,7 +25,7 @@ export function Modal({
   description,
   confirmLabel,
   cancelLabel = "취소",
-  descriptionAlign = "center",
+  descriptionAlign = "left",
   onClose,
   onConfirm,
 }: ModalProps) {
