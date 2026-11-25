@@ -1,3 +1,4 @@
+import { ApiError } from "@xquare/api";
 import { api } from "@/lib/api";
 
 export type AccessTier = "제한" | "교내";
@@ -27,24 +28,27 @@ function formatDateTime(value: string) {
   return value.slice(0, 16).replace("T", " ");
 }
 
-// 활용신청 API 응답 (GET /api-key-applications)
+// 관리자 분야 신청 API 응답 (GET /admin/api-applications)
 export type ApplicationField =
   | "STUDENT"
   | "TEACHER"
   | "CLUB"
   | "SCHEDULE"
   | "STUDY_SUPERVISOR";
-export type ApplicationType = "FIRST" | "ADD_FIELD";
+export type ApplicationLevel = "SCHOOL" | "RESTRICTED";
+export type ApplicationStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 interface ApplicationSummaryResponse {
-  id: number;
+  applicationId: number;
+  projectId: number;
+  projectName: string;
   userId: number;
   field: ApplicationField;
-  type: ApplicationType;
-  serviceName: string;
-  purpose: string;
-  // 오프셋 없는 서울 시각이거나 UTC(Z) 등 오프셋이 붙은 시각
+  level: ApplicationLevel;
+  status: ApplicationStatus;
+  // UTC(Z) 등 오프셋이 붙은 시각이거나 오프셋 없는 서울 시각
   appliedAt: string;
+  decidedAt: string | null;
 }
 
 interface ApplicationListResponse {
@@ -58,9 +62,10 @@ interface ApplicationListResponse {
 
 export interface ApplicationSummary {
   id: string;
+  projectName: string;
   field: ApplicationField;
-  type: ApplicationType;
-  serviceName: string;
+  tier: AccessTier;
+  status: ApplicationStatus;
   appliedAt: string;
 }
 
@@ -78,40 +83,42 @@ export const FIELD_LABELS: Record<ApplicationField, string> = {
   STUDY_SUPERVISOR: "자습 감독",
 };
 
-export const TYPE_LABELS: Record<ApplicationType, string> = {
-  FIRST: "첫 신청 (키 발급)",
-  ADD_FIELD: "분야 추가",
+export const STATUS_LABELS: Record<ApplicationStatus, string> = {
+  PENDING: "승인 대기",
+  APPROVED: "승인",
+  REJECTED: "반려",
 };
 
-// 단계는 분야로 정해짐: 개인정보가 들어간 분야는 제한, 나머지는 교내
-export const tierOf = (field: ApplicationField): AccessTier =>
-  field === "STUDENT" || field === "TEACHER" || field === "STUDY_SUPERVISOR"
-    ? "제한"
-    : "교내";
+// 단계는 서버가 분야로 정해 내려줌: 개인정보가 들어간 분야는 제한, 나머지는 교내
+const tierOf = (level: ApplicationLevel): AccessTier =>
+  level === "RESTRICTED" ? "제한" : "교내";
 
 export const APPLICATION_PAGE_SIZE = 10;
 
-// field, type이 빈 문자열이면 거르지 않음. page는 0부터
+// 반려 사유 최대 길이 (서버 ApiApplicationRejectRequest.reason maxLength)
+export const REJECT_REASON_MAX_LENGTH = 200;
+
+// status가 빈 문자열이면 거르지 않음. page는 0부터
 export async function fetchApplications(
-  params: { field: string; type: string; page: number },
+  params: { status: string; page: number },
   signal?: AbortSignal,
 ): Promise<ApplicationPage> {
   const query = new URLSearchParams({
     page: String(params.page),
     size: String(APPLICATION_PAGE_SIZE),
   });
-  if (params.field) query.set("field", params.field);
-  if (params.type) query.set("type", params.type);
+  if (params.status) query.set("status", params.status);
   const response = await api.get<ApplicationListResponse>(
-    `/api-key-applications?${query}`,
+    `/admin/api-applications?${query}`,
     { signal },
   );
   return {
     applications: response.content.map((item) => ({
-      id: String(item.id),
+      id: String(item.applicationId),
+      projectName: item.projectName,
       field: item.field,
-      type: item.type,
-      serviceName: item.serviceName,
+      tier: tierOf(item.level),
+      status: item.status,
       appliedAt: formatDateTime(item.appliedAt),
     })),
     totalCount: response.totalCount,
@@ -119,8 +126,31 @@ export async function fetchApplications(
   };
 }
 
-// 활용신청 상세 API 응답 (GET /api-key-applications/{applicationId})
-interface ApplicationDetailResponse extends ApplicationSummaryResponse {
+// 관리자 분야 신청 상세 API 응답 (GET /admin/api-applications/{applicationId}).
+// 승인 · 반려 API도 처리한 뒤의 상세를 같은 모양으로 돌려줌
+interface ApplicationDetailResponse {
+  applicationId: number;
+  field: ApplicationField;
+  level: ApplicationLevel;
+  status: ApplicationStatus;
+  rejectReason: string | null;
+  appliedAt: string;
+  decidedAt: string | null;
+  project: {
+    projectId: number;
+    name: string;
+    purpose: string;
+    keyIssued: boolean;
+    createdAt: string;
+    // 이 프로젝트가 신청한 분야 전체
+    fields: {
+      field: ApplicationField;
+      level: ApplicationLevel;
+      status: ApplicationStatus;
+      rejectReason: string | null;
+    }[];
+  };
+  userId: number;
   // 신청자 계정이 지워졌으면 null
   applicant: {
     username: string;
@@ -128,35 +158,62 @@ interface ApplicationDetailResponse extends ApplicationSummaryResponse {
     email: string;
     studentNumber: number | null;
   } | null;
-  // 이 신청자가 신청한 분야
-  fields: { field: ApplicationField; appliedAt: string }[];
 }
 
 export interface ApplicationDetail extends ApplicationSummary {
+  rejectReason: string | null;
+  decidedAt: string | null;
   purpose: string;
+  keyIssued: boolean;
   applicant: ApplicationDetailResponse["applicant"];
-  fields: { field: ApplicationField; appliedAt: string }[];
+  projectFields: { field: ApplicationField; status: ApplicationStatus }[];
 }
+
+const toDetail = (response: ApplicationDetailResponse): ApplicationDetail => ({
+  id: String(response.applicationId),
+  projectName: response.project.name,
+  field: response.field,
+  tier: tierOf(response.level),
+  status: response.status,
+  appliedAt: formatDateTime(response.appliedAt),
+  rejectReason: response.rejectReason,
+  decidedAt: response.decidedAt ? formatDateTime(response.decidedAt) : null,
+  purpose: response.project.purpose,
+  keyIssued: response.project.keyIssued,
+  applicant: response.applicant,
+  projectFields: response.project.fields.map((item) => ({
+    field: item.field,
+    status: item.status,
+  })),
+});
+
+const detailPath = (id: string) =>
+  `/admin/api-applications/${encodeURIComponent(id)}`;
 
 export async function fetchApplication(
   id: string,
   signal?: AbortSignal,
 ): Promise<ApplicationDetail> {
-  const response = await api.get<ApplicationDetailResponse>(
-    `/api-key-applications/${encodeURIComponent(id)}`,
-    { signal },
+  return toDetail(
+    await api.get<ApplicationDetailResponse>(detailPath(id), { signal }),
   );
-  return {
-    id: String(response.id),
-    field: response.field,
-    type: response.type,
-    serviceName: response.serviceName,
-    appliedAt: formatDateTime(response.appliedAt),
-    purpose: response.purpose,
-    applicant: response.applicant,
-    fields: response.fields.map((item) => ({
-      field: item.field,
-      appliedAt: formatDateTime(item.appliedAt),
-    })),
-  };
 }
+
+// 대기 중인 신청을 승인. 프로젝트의 첫 승인이면 서버가 API 키를 발급함
+export async function approveApplication(id: string) {
+  return toDetail(
+    await api.post<ApplicationDetailResponse>(`${detailPath(id)}/approve`),
+  );
+}
+
+export async function rejectApplication(id: string, reason: string) {
+  return toDetail(
+    await api.post<ApplicationDetailResponse>(`${detailPath(id)}/reject`, {
+      reason,
+    }),
+  );
+}
+
+// 다른 관리자가 먼저 승인 · 반려한 신청 (409 APPLICATION_ALREADY_DECIDED)
+export const isAlreadyDecidedError = (error: unknown) =>
+  error instanceof ApiError && error.code === "APPLICATION_ALREADY_DECIDED";

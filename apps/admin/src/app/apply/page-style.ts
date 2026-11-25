@@ -123,7 +123,7 @@ export const CellStatus = styled.div`
   gap: 12px;
 `;
 
-// 서버에 아직 없는 값(상태 · 신청자)의 빈 칸 표시
+// 서버에 아직 없는 값(신청자 · 구분)의 빈 칸 표시
 export const PendingValue = styled.span`
   color: ${Xquare_colors.slate[400]};
 `;
@@ -191,6 +191,19 @@ export const TierText = styled.span<{ $tier: "제한" | "교내" }>`
     $tier === "제한"
       ? Xquare_colors.orange[600]
       : Xquare_colors.slate[600]};
+`;
+
+// 상태: 승인 대기는 주황, 승인은 초록, 반려는 빨강
+export const StatusText = styled.span<{
+  $status: "PENDING" | "APPROVED" | "REJECTED";
+}>`
+  color: ${({ $status }) =>
+    $status === "PENDING"
+      ? Xquare_colors.orange[600]
+      : $status === "APPROVED"
+        ? Xquare_colors.green[700]
+        : Xquare_colors.red[600]};
+  font-weight: 700;
 `;
 
 export const DetailLink = styled(Link)`

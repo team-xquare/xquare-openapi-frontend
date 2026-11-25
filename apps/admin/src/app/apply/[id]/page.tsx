@@ -26,5 +26,6 @@ async function ApplicationDetailLoader({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <ApplicationDetailContent id={id} />;
+  // id가 바뀌면 화면 상태(입력하던 반려 사유, 승인 · 반려 안내)를 새로 시작
+  return <ApplicationDetailContent key={id} id={id} />;
 }

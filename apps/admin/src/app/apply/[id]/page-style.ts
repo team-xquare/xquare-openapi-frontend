@@ -151,10 +151,23 @@ export const ReasonTextarea = styled.textarea`
   }
 `;
 
-export const ReasonHelp = styled.p`
-  color: ${Xquare_colors.slate[600]};
+export const ReasonHelp = styled.p<{ $isError?: boolean }>`
+  color: ${({ $isError }) =>
+    $isError ? Xquare_colors.red[600] : Xquare_colors.slate[600]};
   font-size: 13px;
   margin: 8px 0 0;
+`;
+
+// 승인 · 반려 결과 안내 (성공은 초록, 실패는 빨강)
+export const ActionMessage = styled.p<{ $isError: boolean }>`
+  color: ${({ $isError }) =>
+    $isError ? Xquare_colors.red[600] : Xquare_colors.green[700]};
+  font-size: 14px;
+  margin: 16px 0 0;
+  max-width: 1080px;
+  /* 안내가 없을 때도 자리를 남겨 둬야 스크린 리더가 새 안내를 읽음 */
+  min-height: 1.5em;
+  text-align: right;
 `;
 
 export const TierValue = styled.span<{ $tier: "제한" | "교내" }>`

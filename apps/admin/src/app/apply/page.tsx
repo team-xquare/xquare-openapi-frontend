@@ -6,11 +6,10 @@ import { api } from "@/lib/api";
 import { errorMessage, isAbortError } from "../notice-content";
 import {
   FIELD_LABELS,
-  TYPE_LABELS,
+  STATUS_LABELS,
   fetchApplications,
-  tierOf,
-  type ApplicationField,
   type ApplicationPage,
+  type ApplicationStatus,
 } from "./apply-content";
 import {
   ApplicationTable,
@@ -31,14 +30,14 @@ import {
   RetryButton,
   SearchButton,
   SearchInput,
+  StatusText,
   TierText,
   Total,
 } from "./page-style";
 
 export default function ApplyListPage() {
   const router = useRouter();
-  const [fieldFilter, setFieldFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   // 서버 page는 0부터. 화면에는 1부터 보여 줌
   const [page, setPage] = useState(0);
   // 바뀌면 목록을 다시 불러옴 (다시 시도)
@@ -53,7 +52,7 @@ export default function ApplyListPage() {
     message: string;
   } | null>(null);
 
-  const key = `${fieldFilter}|${typeFilter}|${page}|${reloadKey}`;
+  const key = `${statusFilter}|${page}|${reloadKey}`;
 
   // 다른 화면에서 돌아와 다시 보일 때도 effect가 다시 돌아 최신 목록을 받음
   useEffect(() => {
@@ -63,10 +62,7 @@ export default function ApplyListPage() {
       return;
     }
     const request = new AbortController();
-    fetchApplications(
-      { field: fieldFilter, type: typeFilter, page },
-      request.signal,
-    )
+    fetchApplications({ status: statusFilter, page }, request.signal)
       .then((data) => {
         setLoaded({ key, data });
         // 다시 불러왔더니 목록이 줄어 지금 페이지가 없어졌으면 마지막 페이지로 옮김
@@ -83,7 +79,7 @@ export default function ApplyListPage() {
         });
       });
     return () => request.abort();
-  }, [router, key, fieldFilter, typeFilter, page]);
+  }, [router, key, statusFilter, page]);
 
   const current = loaded?.key === key ? loaded.data : null;
   const rows = current?.applications ?? [];
@@ -117,42 +113,39 @@ export default function ApplyListPage() {
           aria-describedby="filter-pending-note"
           disabled
         />
+        {/* 서버 목록 API는 상태 조건만 받음. 분야 · 구분 · 단계 · 검색은 아직 없어서 쓸 수 없음 */}
         <FilterSelect
           aria-label="분야 필터"
-          value={fieldFilter}
-          onChange={(event) => {
-            setFieldFilter(event.target.value);
-            setPage(0);
-          }}
-        >
-          <option value="">분야 전체</option>
-          {(Object.keys(FIELD_LABELS) as ApplicationField[]).map((field) => (
-            <option key={field} value={field}>
-              {FIELD_LABELS[field]}
-            </option>
-          ))}
-        </FilterSelect>
-        <FilterSelect
-          aria-label="구분 필터"
-          value={typeFilter}
-          onChange={(event) => {
-            setTypeFilter(event.target.value);
-            setPage(0);
-          }}
-        >
-          <option value="">구분 전체</option>
-          <option value="FIRST">{TYPE_LABELS.FIRST}</option>
-          <option value="ADD_FIELD">{TYPE_LABELS.ADD_FIELD}</option>
-        </FilterSelect>
-        {/* 서버에 상태 · 단계 · 검색 조건이 아직 없어서 쓸 수 없음.
-            단계는 분야로 정해지는 값이고 서버는 분야 하나만 받으므로 화면에서 거르지 않음 */}
-        <FilterSelect
-          aria-label="상태 필터"
           aria-describedby="filter-pending-note"
           title="서버 연동 준비 중"
           disabled
         >
-          <option>상태 전체</option>
+          <option>분야 전체</option>
+        </FilterSelect>
+        <FilterSelect
+          aria-label="구분 필터"
+          aria-describedby="filter-pending-note"
+          title="서버 연동 준비 중"
+          disabled
+        >
+          <option>구분 전체</option>
+        </FilterSelect>
+        <FilterSelect
+          aria-label="상태 필터"
+          value={statusFilter}
+          onChange={(event) => {
+            setStatusFilter(event.target.value);
+            setPage(0);
+          }}
+        >
+          <option value="">상태 전체</option>
+          {(Object.keys(STATUS_LABELS) as ApplicationStatus[]).map(
+            (status) => (
+              <option key={status} value={status}>
+                {STATUS_LABELS[status]}
+              </option>
+            ),
+          )}
         </FilterSelect>
         <FilterSelect
           aria-label="단계 필터"
@@ -172,7 +165,7 @@ export default function ApplyListPage() {
         </SearchButton>
       </FilterBar>
       <FilterNote id="filter-pending-note">
-        검색과 상태 · 단계 필터는 서버 API가 준비되면 사용할 수 있습니다.
+        검색과 분야 · 구분 · 단계 필터는 서버 API가 준비되면 사용할 수 있습니다.
       </FilterNote>
 
       {/* 목록이 이미 보이는데 다시 불러오기가 실패하면 빈 행 자리가 없으므로 표 위에 알림 */}
@@ -188,41 +181,44 @@ export default function ApplyListPage() {
       <ApplicationTable aria-label="활용신청 목록">
         <thead>
           <tr>
-            <th scope="col">서비스 · 분야</th>
+            <th scope="col">프로젝트 · 분야</th>
             <th scope="col">단계</th>
-            <th scope="col" title="서버 연동 준비 중">
-              상태
-            </th>
+            <th scope="col">상태</th>
             <th scope="col" title="서버 연동 준비 중">
               신청자
             </th>
             <th scope="col">신청일시</th>
-            <th scope="col">구분</th>
+            <th scope="col" title="서버 연동 준비 중">
+              구분
+            </th>
             <th scope="col">상세</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((application) => {
-            const tier = tierOf(application.field);
-            const title = `${application.serviceName} · ${FIELD_LABELS[application.field]}`;
+            const title = `${application.projectName} · ${FIELD_LABELS[application.field]}`;
             return (
               <tr key={application.id}>
                 <td title={title}>{title}</td>
                 <td>
-                  <TierText $tier={tier}>{tier}</TierText>
+                  <TierText $tier={application.tier}>{application.tier}</TierText>
                 </td>
                 <td>
-                  <PendingValue title="서버 연동 준비 중">—</PendingValue>
+                  <StatusText $status={application.status}>
+                    {STATUS_LABELS[application.status]}
+                  </StatusText>
                 </td>
+                {/* 목록 응답에 신청자 이름과 첫 신청 · 분야 추가 구분이 없어 상세에서 확인 */}
                 <td>
                   <PendingValue title="서버 연동 준비 중">—</PendingValue>
                 </td>
                 <td>{application.appliedAt}</td>
-                <td>{TYPE_LABELS[application.type]}</td>
+                <td>
+                  <PendingValue title="서버 연동 준비 중">—</PendingValue>
+                </td>
                 <td>
                   <DetailLink href={`/apply/${application.id}`}>
-                    {/* 상태가 서버에 없어서 단계로 판단: 제한 분야는 관리자 검토 대상 */}
-                    {tier === "제한" ? "검토하기" : "상세"}
+                    {application.status === "PENDING" ? "검토하기" : "상세"}
                   </DetailLink>
                 </td>
               </tr>
@@ -240,7 +236,7 @@ export default function ApplyListPage() {
                   </CellStatus>
                 ) : current === null ? (
                   "활용신청 목록을 불러오는 중입니다."
-                ) : fieldFilter || typeFilter ? (
+                ) : statusFilter ? (
                   "검색 결과가 없습니다."
                 ) : (
                   "활용신청 내역이 없습니다."

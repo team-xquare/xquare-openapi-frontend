@@ -10,14 +10,19 @@ import {
 } from "../../notice-content";
 import {
   FIELD_LABELS,
-  TYPE_LABELS,
+  REJECT_REASON_MAX_LENGTH,
+  STATUS_LABELS,
+  approveApplication,
   fetchApplication,
-  tierOf,
+  isAlreadyDecidedError,
+  rejectApplication,
   type ApplicationDetail,
 } from "../apply-content";
+import { StatusText } from "../page-style";
 import {
   ActionBar,
   ActionGroup,
+  ActionMessage,
   ApproveButton,
   BackLink,
   DetailCard,
@@ -47,6 +52,16 @@ export function ApplicationDetailContent({ id }: { id: string }) {
   // 바뀌면 다시 불러옴 (다시 시도)
   const [reloadKey, setReloadKey] = useState(0);
   const [reason, setReason] = useState("");
+  // 승인 · 반려 요청 중이면 어느 쪽인지
+  const [deciding, setDeciding] = useState<"approve" | "reject" | null>(null);
+  // 승인 · 반려 결과 안내. 실패면 isError
+  const [actionMessage, setActionMessage] = useState<{
+    id: string;
+    text: string;
+    isError: boolean;
+  } | null>(null);
+  // 반려를 눌렀는데 사유가 비어 있으면 입력칸에 오류 표시
+  const [reasonMissing, setReasonMissing] = useState(false);
 
   // 다른 화면에서 돌아와 다시 보일 때도 effect가 다시 돌아 최신 내용을 받음
   useEffect(() => {
@@ -110,16 +125,63 @@ export function ApplicationDetailContent({ id }: { id: string }) {
     );
   }
 
-  const tier = tierOf(shown.field);
-  const isRestricted = tier === "제한";
-  const { applicant } = shown;
+  const { applicant, tier } = shown;
+  const isPending = shown.status === "PENDING";
+  const messageHere = actionMessage?.id === id ? actionMessage : null;
+
+  const decide = async (action: "approve" | "reject") => {
+    const trimmed = reason.trim();
+    if (action === "reject" && !trimmed) {
+      setReasonMissing(true);
+      document.getElementById("reject-reason")?.focus();
+      return;
+    }
+    setDeciding(action);
+    setActionMessage(null);
+    try {
+      const updated =
+        action === "approve"
+          ? await approveApplication(id)
+          : await rejectApplication(id, trimmed);
+      setApplication(updated);
+      setReason("");
+      setActionMessage({
+        id,
+        text: action === "approve" ? "승인했습니다." : "반려했습니다.",
+        isError: false,
+      });
+    } catch (error: unknown) {
+      if (isAlreadyDecidedError(error)) {
+        // 다른 관리자가 먼저 처리했으면 바뀐 상태를 다시 불러와 보여 줌
+        setActionMessage({
+          id,
+          text: "이미 승인 또는 반려된 신청입니다. 바뀐 상태를 다시 불러왔습니다.",
+          isError: true,
+        });
+        setReloadKey((key) => key + 1);
+      } else {
+        setActionMessage({
+          id,
+          text: errorMessage(
+            error,
+            action === "approve"
+              ? "승인하지 못했습니다. 잠시 후 다시 시도해주세요."
+              : "반려하지 못했습니다. 잠시 후 다시 시도해주세요.",
+          ),
+          isError: true,
+        });
+      }
+    } finally {
+      setDeciding(null);
+    }
+  };
 
   return (
     <DetailPage>
       <PageHead>
         <PageTitle>활용신청 상세</PageTitle>
         <PageDescription>
-          {shown.serviceName} · {FIELD_LABELS[shown.field]}
+          {shown.projectName} · {FIELD_LABELS[shown.field]}
         </PageDescription>
       </PageHead>
 
@@ -139,6 +201,10 @@ export function ApplicationDetailContent({ id }: { id: string }) {
           <dd>{applicant?.email ?? "—"}</dd>
         </DetailRow>
         <DetailRow>
+          <dt>프로젝트</dt>
+          <dd>{shown.projectName}</dd>
+        </DetailRow>
+        <DetailRow>
           <dt>분야</dt>
           <dd>{FIELD_LABELS[shown.field]}</dd>
         </DetailRow>
@@ -146,30 +212,29 @@ export function ApplicationDetailContent({ id }: { id: string }) {
           <dt>접근 단계</dt>
           <dd>
             <TierValue $tier={tier}>
-              {isRestricted
+              {tier === "제한"
                 ? "제한 — 개인정보가 들어간 데이터라 관리자 승인이 있어야 호출할 수 있습니다"
                 : "교내 — 신청하면 자동 승인"}
             </TierValue>
           </dd>
         </DetailRow>
         <DetailRow>
-          <dt>구분</dt>
-          <dd>{TYPE_LABELS[shown.type]}</dd>
-        </DetailRow>
-        <DetailRow>
           <dt>상태</dt>
           <dd>
-            {isRestricted
-              ? "서버 연동 준비 중"
-              : "승인 완료 (교내 · 자동 승인)"}
+            <StatusText $status={shown.status}>
+              {STATUS_LABELS[shown.status]}
+            </StatusText>
+            {shown.decidedAt && ` (${shown.decidedAt} 처리)`}
           </dd>
         </DetailRow>
+        {shown.status === "REJECTED" && (
+          <DetailRow>
+            <dt>반려 사유</dt>
+            <dd>{shown.rejectReason || "—"}</dd>
+          </DetailRow>
+        )}
         <DetailRow>
-          <dt>서비스명</dt>
-          <dd>{shown.serviceName}</dd>
-        </DetailRow>
-        <DetailRow>
-          <dt>{isRestricted ? "사용 목적" : "사용 내용"}</dt>
+          <dt>사용 목적</dt>
           <dd>{shown.purpose}</dd>
         </DetailRow>
         <DetailRow>
@@ -177,16 +242,27 @@ export function ApplicationDetailContent({ id }: { id: string }) {
           <dd>{shown.appliedAt}</dd>
         </DetailRow>
         <DetailRow>
-          <dt>신청한 분야</dt>
+          <dt>프로젝트 분야</dt>
           <dd>
-            {shown.fields.length > 0
-              ? shown.fields
-                  .map((item) => `${FIELD_LABELS[item.field]} (${item.appliedAt})`)
+            {shown.projectFields.length > 0
+              ? shown.projectFields
+                  .map(
+                    (item) =>
+                      `${FIELD_LABELS[item.field]} (${STATUS_LABELS[item.status]})`,
+                  )
                   .join(" · ")
               : "—"}
           </dd>
         </DetailRow>
-        {isRestricted && (
+        <DetailRow>
+          <dt>API 키</dt>
+          <dd>
+            {shown.keyIssued
+              ? "발급됨"
+              : "아직 발급 전 (프로젝트의 첫 승인 때 발급)"}
+          </dd>
+        </DetailRow>
+        {isPending && (
           <DetailRow>
             <dt>
               <label htmlFor="reject-reason">반려 사유</label>
@@ -195,12 +271,21 @@ export function ApplicationDetailContent({ id }: { id: string }) {
               <ReasonTextarea
                 id="reject-reason"
                 aria-describedby="reject-reason-help"
+                aria-invalid={reasonMissing || undefined}
+                maxLength={REJECT_REASON_MAX_LENGTH}
                 value={reason}
+                disabled={deciding !== null}
                 placeholder="반려할 때 신청자에게 보여 줄 사유를 적어 주세요. (예: 사용 목적을 더 자세히 적어 주세요)"
-                onChange={(event) => setReason(event.target.value)}
+                onChange={(event) => {
+                  setReason(event.target.value);
+                  if (event.target.value.trim()) setReasonMissing(false);
+                }}
               />
-              <ReasonHelp id="reject-reason-help">
-                반려 사유를 입력해야 반려할 수 있습니다
+              <ReasonHelp id="reject-reason-help" $isError={reasonMissing}>
+                {reasonMissing
+                  ? "반려 사유를 입력해주세요."
+                  : "반려 사유를 입력해야 반려할 수 있습니다"}{" "}
+                ({reason.length}/{REJECT_REASON_MAX_LENGTH})
               </ReasonHelp>
             </dd>
           </DetailRow>
@@ -209,31 +294,32 @@ export function ApplicationDetailContent({ id }: { id: string }) {
 
       <ActionBar>
         <BackLink href="/apply">목록으로</BackLink>
-        {isRestricted && (
+        {isPending && (
           <ActionGroup>
-            {/* 승인 · 반려 API가 서버에 아직 없어서 쓸 수 없음 */}
             <RejectButton
               type="button"
-              aria-describedby="review-pending-note"
-              disabled
+              disabled={deciding !== null}
+              onClick={() => decide("reject")}
             >
-              반려
+              {deciding === "reject" ? "반려 중…" : "반려"}
             </RejectButton>
             <ApproveButton
               type="button"
-              aria-describedby="review-pending-note"
-              disabled
+              disabled={deciding !== null}
+              onClick={() => decide("approve")}
             >
-              승인
+              {deciding === "approve" ? "승인 중…" : "승인"}
             </ApproveButton>
           </ActionGroup>
         )}
       </ActionBar>
-      {isRestricted && (
-        <ReasonHelp id="review-pending-note">
-          승인 · 반려는 서버 API가 준비되면 사용할 수 있습니다.
-        </ReasonHelp>
-      )}
+      {/* 승인 · 반려 결과는 화면 아래에 글로도 보여 주고 스크린 리더에도 읽힘 */}
+      <ActionMessage
+        role={messageHere?.isError ? "alert" : "status"}
+        $isError={messageHere?.isError ?? false}
+      >
+        {messageHere?.text ?? ""}
+      </ActionMessage>
     </DetailPage>
   );
 }
