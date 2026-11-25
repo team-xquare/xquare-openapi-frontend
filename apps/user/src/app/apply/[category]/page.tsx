@@ -18,11 +18,11 @@ import {
   FieldInput,
   FieldLabel,
   FieldRow,
-  FieldSelect,
   FieldTextarea,
   StepTitle,
   TextareaFieldRow,
 } from "../page-style";
+import { ProjectSelector } from "../project-selector";
 
 const CATEGORY_CONFIG = {
   club: {
@@ -70,6 +70,7 @@ export default function IntermediateApplyPage() {
   const [project, setProject] = useState("team-xquare");
   const [purpose, setPurpose] = useState("");
   const [serviceUrl, setServiceUrl] = useState("TEST.TEST.COM");
+  const [isFirstApproval, setIsFirstApproval] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
 
@@ -110,15 +111,14 @@ export default function IntermediateApplyPage() {
           </StepTitle>
           <FieldRow>
             <FieldLabel htmlFor="project">프로젝트</FieldLabel>
-            <FieldSelect
-              id="project"
+            <ProjectSelector
               value={project}
-              onChange={(event) => setProject(event.target.value)}
-              aria-label="프로젝트 선택"
-            >
-              <option value="team-xquare">team-xquare</option>
-              <option value="new-project">새 프로젝트 만들기</option>
-            </FieldSelect>
+              onChange={(value) => {
+                setProject(value);
+                setIsFirstApproval(false);
+              }}
+              onCreated={() => setIsFirstApproval(true)}
+            />
           </FieldRow>
           <ApplyLead>
             목록에서 이 분야를 쓸 프로젝트를 고르거나, ‘새 프로젝트 만들기’로
@@ -204,7 +204,7 @@ export default function IntermediateApplyPage() {
           onClose={() => setIsVerificationOpen(false)}
           onVerify={() =>
             router.push(
-              `/apply/success?serviceName=${encodeURIComponent(project.trim())}&category=${category}&purpose=${encodeURIComponent(purpose.trim())}&firstApproval=${String(project === "new-project")}`,
+              `/apply/success?serviceName=${encodeURIComponent(project.trim())}&category=${category}&purpose=${encodeURIComponent(purpose.trim())}&firstApproval=${String(isFirstApproval)}`,
             )
           }
         />

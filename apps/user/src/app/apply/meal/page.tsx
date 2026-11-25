@@ -15,9 +15,9 @@ import {
   FieldInput,
   FieldLabel,
   FieldRow,
-  FieldSelect,
   StepTitle,
 } from "../page-style";
+import { ProjectSelector } from "../project-selector";
 
 export default function MealApplyPage() {
   const router = useRouter();
@@ -53,15 +53,7 @@ export default function MealApplyPage() {
           <StepTitle id="project-step">1단계 · 프로젝트 고르기</StepTitle>
           <FieldRow>
             <FieldLabel htmlFor="project">프로젝트</FieldLabel>
-            <FieldSelect
-              id="project"
-              value={project}
-              onChange={(event) => setProject(event.target.value)}
-              aria-label="프로젝트 선택"
-            >
-              <option value="team-xquare">team-xquare</option>
-              <option value="new-project">새 프로젝트 만들기</option>
-            </FieldSelect>
+            <ProjectSelector value={project} onChange={setProject} />
           </FieldRow>
           <ApplyLead>
             목록에서 이 분야를 쓸 프로젝트를 고르거나, ‘새 프로젝트 만들기’로
@@ -88,7 +80,6 @@ export default function MealApplyPage() {
           완료 <span aria-hidden="true">→</span>
         </CompleteButton>
       </ApplyForm>
-
     </ApplyContainer>
   );
 }
