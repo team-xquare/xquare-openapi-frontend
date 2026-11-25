@@ -62,6 +62,17 @@ export const FilterBar = styled.form`
   margin-bottom: 20px;
 `;
 
+export const SearchInput = styled.input`
+  ${CONTROL}
+  flex: 1 1 240px;
+  min-width: 0;
+  padding: 0 16px;
+
+  &::placeholder {
+    color: ${Xquare_colors.slate[400]};
+  }
+`;
+
 export const FilterSelect = styled.select`
   ${CONTROL}
   cursor: pointer;

@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { isAbortError } from "../notice-content";
 import {
+  API_SEARCH_MAX_LENGTH,
   MAX_PAGE_INDEX,
+  USAGE_FIELD_LABELS,
   createUsageLogRange,
   fetchUsageLogs,
   usageLogErrorMessage,
@@ -25,6 +27,7 @@ import {
   PageTitle,
   Pager,
   SearchButton,
+  SearchInput,
   Status,
   Total,
   UsagePage,
@@ -39,11 +42,15 @@ export default function UsageLogPage() {
   const [periodFilter, setPeriodFilter] = useState("1d");
   const [methodFilter, setMethodFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [apiSearch, setApiSearch] = useState("");
+  const [fieldFilter, setFieldFilter] = useState("all");
   // 검색 버튼을 눌러야 적용되는 조건 + 서버 페이지 (0부터)
   const [query, setQuery] = useState<UsageLogQuery>(() => ({
     ...createUsageLogRange("1d"),
     method: "all",
     status: "all",
+    api: "",
+    field: "all",
     page: 0,
   }));
   // 마지막으로 받아 온 결과와 그때의 조건. 조건(객체)이 바뀌면 새로 받을 때까지 불러오는 중
@@ -92,7 +99,9 @@ export default function UsageLogPage() {
     loaded.query.from === query.from &&
     loaded.query.to === query.to &&
     loaded.query.method === query.method &&
-    loaded.query.status === query.status;
+    loaded.query.status === query.status &&
+    loaded.query.api === query.api &&
+    loaded.query.field === query.field;
   const data = sameSearch ? loaded.data : undefined;
   const currentPage = query.page;
   // 서버가 page를 1000까지만 받음
@@ -115,6 +124,8 @@ export default function UsageLogPage() {
       ...createUsageLogRange(periodFilter),
       method: methodFilter,
       status: statusFilter,
+      api: apiSearch.trim(),
+      field: fieldFilter,
       page: 0,
     });
   };
@@ -127,11 +138,19 @@ export default function UsageLogPage() {
         <PageTitle>사용 기록</PageTitle>
         <PageDescription>
           API를 호출할 때마다 남는 기록입니다. 호출 시각, 메서드, 경로, 응답 코드,
-          응답 시간을 최신순으로 볼 수 있습니다.
+          응답 시간을 최신순으로 보고, API 경로와 분야로 찾을 수 있습니다.
         </PageDescription>
       </PageHead>
 
       <FilterBar role="search" onSubmit={handleSearch}>
+        <SearchInput
+          type="search"
+          placeholder="API 경로로 검색 (예: /notices)"
+          aria-label="API 경로 검색"
+          maxLength={API_SEARCH_MAX_LENGTH}
+          value={apiSearch}
+          onChange={(event) => setApiSearch(event.target.value)}
+        />
         <FilterSelect
           aria-label="기간 필터"
           value={periodFilter}
@@ -140,6 +159,19 @@ export default function UsageLogPage() {
           <option value="1d">최근 1일</option>
           <option value="7d">최근 7일</option>
           <option value="30d">최근 30일</option>
+        </FilterSelect>
+        <FilterSelect
+          aria-label="분야 필터"
+          title="분야를 고르면 공개 급식처럼 분야가 없는 기록은 빠집니다"
+          value={fieldFilter}
+          onChange={(event) => setFieldFilter(event.target.value)}
+        >
+          <option value="all">분야 전체</option>
+          {Object.entries(USAGE_FIELD_LABELS).map(([field, label]) => (
+            <option key={field} value={field}>
+              {label}
+            </option>
+          ))}
         </FilterSelect>
         <FilterSelect
           aria-label="메서드 필터"
@@ -214,7 +246,14 @@ export default function UsageLogPage() {
                     </SearchButton>
                   </CellStatus>
                 ) : isCurrent ? (
-                  "기간 안에 사용 기록이 없습니다."
+                  query.api ||
+                  query.field !== "all" ||
+                  query.method !== "all" ||
+                  query.status !== "all" ? (
+                    "조건에 맞는 사용 기록이 없습니다."
+                  ) : (
+                    "기간 안에 사용 기록이 없습니다."
+                  )
                 ) : (
                   "사용 기록을 불러오는 중입니다."
                 )}

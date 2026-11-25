@@ -28,6 +28,10 @@ export interface UsageLogQuery {
   method: string;
   // "all" 또는 정확한 상태 코드
   status: string;
+  // API 경로 일부 (예: "/notices"). 빈 문자열이면 거르지 않음
+  api: string;
+  // "all" 또는 분야 (STUDENT 등)
+  field: string;
   // 서버 페이지 번호 (0부터)
   page: number;
 }
@@ -52,6 +56,17 @@ interface UsageLogListResponse {
 }
 
 export const PAGE_SIZE = 20;
+// 서버가 받는 API 경로 검색어 최대 길이
+export const API_SEARCH_MAX_LENGTH = 160;
+
+// 서버 field 조건에 넣을 수 있는 분야. 공개 급식처럼 분야가 없는 기록은 분야를 고르면 빠짐
+export const USAGE_FIELD_LABELS: Record<string, string> = {
+  STUDENT: "학생",
+  TEACHER: "교직원",
+  CLUB: "동아리",
+  SCHEDULE: "일정",
+  STUDY_SUPERVISOR: "자습 감독",
+};
 // 서버가 받는 가장 큰 page 값
 export const MAX_PAGE_INDEX = 1000;
 
@@ -118,6 +133,10 @@ export async function fetchUsageLogs(
   });
   if (query.method !== "all") params.set("method", query.method);
   if (query.status !== "all") params.set("status", query.status);
+  // 서버는 빈 문자열 · 공백만 있는 검색어를 400으로 막으므로 그런 값은 보내지 않음
+  const apiSearch = query.api.trim();
+  if (apiSearch) params.set("api", apiSearch);
+  if (query.field !== "all") params.set("field", query.field);
   const response = await api.get<UsageLogListResponse>(
     `/admin/api-usage-logs?${params}`,
     { signal },
