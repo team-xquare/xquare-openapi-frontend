@@ -34,10 +34,31 @@ export const ApplyTitle = styled.h1`
 `;
 
 export const ApplyLead = styled.p`
-  color: ${Xquare_colors.slate[900]};
-  font-size: 16px;
+  color: ${Xquare_colors.slate[500]};
+  font-size: 13px;
   line-height: 1.5;
   margin: 0;
+`;
+
+export const ApplyDescription = styled(ApplyLead)`
+  color: ${Xquare_colors.slate[900]};
+  font-size: 16px;
+`;
+
+export const ApplyBadge = styled.span`
+  align-self: flex-start;
+  background: ${Xquare_colors.green[100]};
+  border-radius: 999px;
+  color: ${Xquare_colors.green[500]};
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  padding: 2px 12px;
+`;
+
+export const ApplyRestrictedBadge = styled(ApplyBadge)`
+  background: #fff0db;
+  color: #c46700;
 `;
 
 export const ApplyForm = styled.form`
@@ -87,6 +108,18 @@ export const FieldLabel = styled.label`
   line-height: 1.5;
 `;
 
+export const TextareaFieldRow = styled(FieldRow)`
+  align-items: flex-end;
+
+  label {
+    padding-bottom: 4px;
+  }
+
+  @media (max-width: 560px) {
+    align-items: stretch;
+  }
+`;
+
 export const FieldInput = styled.input`
   background: transparent;
   border: 0;
@@ -105,6 +138,63 @@ export const FieldInput = styled.input`
     color: ${Xquare_colors.gray[400]};
     opacity: 1;
   }
+
+  &:focus-visible {
+    box-shadow: 0 1px 0 ${Xquare_colors.blue[500]};
+  }
+
+  @media (max-width: 560px) {
+    text-align: left;
+    width: 100%;
+  }
+`;
+
+export const FieldTextarea = styled.textarea`
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: ${Xquare_colors.slate[900]};
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  min-height: 48px;
+  min-width: 0;
+  outline: none;
+  padding: 4px 0;
+  resize: vertical;
+  text-align: right;
+  width: min(60%, 720px);
+
+  &::placeholder {
+    color: ${Xquare_colors.gray[400]};
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    box-shadow: 0 1px 0 ${Xquare_colors.blue[500]};
+  }
+
+  @media (max-width: 560px) {
+    text-align: left;
+    width: 100%;
+  }
+`;
+
+export const FieldSelect = styled.select`
+  appearance: auto;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: ${Xquare_colors.slate[900]};
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  min-width: 0;
+  outline: none;
+  padding: 4px 24px 4px 0;
+  text-align: right;
+  width: min(60%, 420px);
 
   &:focus-visible {
     box-shadow: 0 1px 0 ${Xquare_colors.blue[500]};

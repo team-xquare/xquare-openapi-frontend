@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import type { ReactNode } from "react";
 import localFont from "next/font/local";
 import { Roboto_Mono } from "next/font/google";
@@ -33,7 +34,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="ko" className={`${pretendard.variable} ${robotoMono.variable}`}>
       <body suppressHydrationWarning>
         <EmotionRegistry>
-          <AppLayout>{children}</AppLayout>
+          <Suspense fallback={null}>
+            <AppLayout>{children}</AppLayout>
+          </Suspense>
         </EmotionRegistry>
       </body>
     </html>

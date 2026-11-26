@@ -43,13 +43,22 @@ export const DetailRow = styled.div`
   font-size: 16px;
   line-height: 1.5;
 
-  dt { font-weight: 700; }
-  dd { margin: 0; overflow-wrap: anywhere; }
+  dt {
+    font-weight: 700;
+  }
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
 
   @media (max-width: 640px) {
     gap: 12px;
     grid-template-columns: 90px minmax(0, 1fr);
   }
+`;
+
+export const PendingStatus = styled.strong`
+  color: #c46700;
 `;
 
 export const KeyPanel = styled.div`
@@ -101,7 +110,9 @@ export const KeyNotice = styled.p`
   line-height: 1.5;
   margin: 20px 0 0;
 
-  &:empty { display: none; }
+  &:empty {
+    display: none;
+  }
 `;
 
 export const SuccessActions = styled.nav`
