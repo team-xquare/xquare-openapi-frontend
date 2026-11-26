@@ -392,7 +392,7 @@ export default function ApiTestPage() {
               <FieldHint>
                 입력한 키는 이 요청의 헤더로만 보내고 저장하지 않습니다.
                 프로젝트에서 활용신청해 승인된 분야의 API만 호출할 수 있고, 공개
-                API(급식 등)는 키 없이 호출할 수 있습니다.
+                API(급식 등)는 신청만 하면 바로 호출할 수 있습니다.
               </FieldHint>
             </CardBody>
           </Card>
