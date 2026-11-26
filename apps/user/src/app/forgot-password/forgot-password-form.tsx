@@ -42,6 +42,7 @@ const DEFAULT_ERROR_MESSAGE =
 // 서버 메시지만으로는 왜 처음으로 돌아갔는지 알기 어려워 따로 씀
 const VERIFY_EXPIRED_MESSAGE =
   "이메일 인증 시간이 지났습니다. 인증코드를 다시 받아주세요.";
+const NOT_REGISTERED_MESSAGE = "가입되지 않은 이메일입니다. 회원가입 후 이용해주세요.";
 const RESENT_MESSAGE = "인증코드를 다시 보냈습니다.";
 
 type ValidatedField = "email" | "verifyCode" | "password";
@@ -74,6 +75,8 @@ export function ForgotPasswordForm() {
     Partial<Record<ServerErrorField, string>>
   >({});
   const [notice, setNotice] = useState("");
+  // 인증은 가입 여부와 상관없이 통과하므로 변경 요청에서야 알게 됨
+  const [isNotRegistered, setIsNotRegistered] = useState(false);
 
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   // 진행 중인 요청. 화면을 떠나면 취소해서 숨겨진 화면의 상태를 바꾸지 않게 함
@@ -112,7 +115,9 @@ export function ForgotPasswordForm() {
   const verifyCodeError = errorFor("verifyCode");
 
   // 스크린 리더가 바로 읽어줄 서버 오류
-  const liveError = Object.values(serverErrors).find(Boolean) ?? "";
+  const liveError =
+    Object.values(serverErrors).find(Boolean) ||
+    (isNotRegistered ? NOT_REGISTERED_MESSAGE : "");
 
   // 다른 페이지로 이동해도 화면이 숨겨진 채 상태가 남으므로,
   // 다시 들어오면 1단계부터 시작하도록 숨겨질 때 초기화
@@ -130,6 +135,7 @@ export function ForgotPasswordForm() {
       setPending(null);
       setServerErrors({});
       setNotice("");
+      setIsNotRegistered(false);
     };
   }, []);
 
@@ -271,6 +277,15 @@ export function ForgotPasswordForm() {
           return;
         }
 
+        // 가입되지 않은 이메일은 비밀번호 확인 오류가 아니므로 따로 안내하고 입력값은 남김
+        if (
+          error instanceof ApiError &&
+          (error.code === "USER_NOT_FOUND" || error.status === 404)
+        ) {
+          setIsNotRegistered(true);
+          return;
+        }
+
         setServerErrors({ passwordCheck: messageOf(error) });
       },
     );
@@ -301,6 +316,7 @@ export function ForgotPasswordForm() {
     }
 
     setServerErrors({});
+    setIsNotRegistered(false);
     void resetPassword();
   };
 
@@ -388,6 +404,13 @@ export function ForgotPasswordForm() {
         <AuthLiveMessage role="alert">{liveError}</AuthLiveMessage>
         {/* 재발송 같은 안내는 오류처럼 끊고 읽지 않도록 따로 둠 */}
         <AuthLiveMessage role="status">{notice}</AuthLiveMessage>
+
+        {isNotRegistered && (
+          <AuthLinkRow style={{ color: ERROR_COLOR }}>
+            {NOT_REGISTERED_MESSAGE}
+            <AuthLink href="/signup">회원가입</AuthLink>
+          </AuthLinkRow>
+        )}
 
         <AuthFormActions>
           <Button_square type="submit" disabled={isNextDisabled || isPending}>
