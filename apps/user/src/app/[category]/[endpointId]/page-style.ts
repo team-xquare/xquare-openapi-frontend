@@ -185,3 +185,36 @@ export const BackLink = styled(Link)`
   line-height: 28.5px;
   padding: 0 20px;
 `;
+
+// 이용 조건의 '내 신청 상태' 값
+export const StatusLine = styled.span`
+  color: ${Xquare_colors.slate[900]};
+`;
+
+export const StatusList = styled.ul`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+`;
+
+export const StatusLink = styled(Link)`
+  color: ${Xquare_colors.blue[500]};
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+`;
+
+export const StatusRetryButton = styled.button`
+  background: none;
+  border: 0;
+  color: ${Xquare_colors.blue[500]};
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+`;
