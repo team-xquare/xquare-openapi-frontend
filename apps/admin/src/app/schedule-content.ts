@@ -1,4 +1,10 @@
-import { BASE_DATE } from "./home-content";
+import type { ScheduleResponse } from "@/lib/schedules-api";
+import type { StudySupervisorDayResponse } from "@/lib/study-supervisors-api";
+
+export {
+  SCHEDULE_CONTENT_MAX_LENGTH,
+  SCHEDULE_TITLE_MAX_LENGTH,
+} from "@/lib/schedules-api";
 
 export interface Schedule {
   id: string;
@@ -16,39 +22,53 @@ export interface Supervision {
   floor4?: string;
 }
 
-export const SCHEDULE_TITLE_MAX_LENGTH = 50;
+export interface Month {
+  year: number;
+  month: number;
+}
 
-// 일정 화면을 처음 열었을 때 보여줄 연·월 (홈 화면과 같은 기준일)
-export const SCHEDULE_BASE_YEAR = Number(BASE_DATE.slice(0, 4));
-export const SCHEDULE_BASE_MONTH = Number(BASE_DATE.slice(5, 7));
+// 나이스에서 받아온 일정(source NEIS)은 이 화면에서 고치지 않으므로 학교가 등록한 일정만 씀
+export const isSchoolSchedule = (response: ScheduleResponse) =>
+  response.source === "SCHOOL";
 
-// 일정 API 연동 전까지 쓰는 더미 데이터
-export const SCHEDULES: Schedule[] = [
-  { id: "1", date: "2026-08-17", title: "여름방학 종료" },
-  { id: "2", date: "2026-09-01", title: "2학기 개학" },
-  {
-    id: "3",
-    date: "2026-09-05",
-    title: "체육대회",
-    description: "우천 시 9월 12일로 순연",
-  },
-  {
-    id: "4",
-    date: "2026-09-14",
-    title: "중간고사 시작",
-    description: "1~3학년 전체",
-  },
-  { id: "5", date: "2026-09-28", title: "추석 연휴 시작" },
-  { id: "6", date: "2026-10-09", title: "한글날" },
-];
+export const toSchedule = (response: ScheduleResponse): Schedule => ({
+  id: String(response.id),
+  date: response.date,
+  title: response.title,
+  description: response.content || undefined,
+});
 
-// 자습 감독은 자습감독 화면에서 입력하고, 일정 화면에서는 보기만 함
-export const SUPERVISIONS: Supervision[] = [
-  {
-    date: "2026-09-14",
-    floor2: "이진경",
-    floor3: "정은진",
-    floor4: "김선생",
-  },
-  { date: "2026-09-15", floor2: "정은진", floor3: "박지현" },
-];
+// 배정이 없는 날(id null)은 자습 감독 표에 넣지 않음
+export const toSupervisions = (days: StudySupervisorDayResponse[]) =>
+  days
+    .filter((day) => day.id !== null)
+    .map((day): Supervision => {
+      const teacherOf = (floor: number) =>
+        day.supervisors.find((item) => item.floor === floor)?.teacher?.name;
+      return {
+        date: day.date,
+        floor2: teacherOf(2),
+        floor3: teacherOf(3),
+        floor4: teacherOf(4),
+      };
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+const pad = (value: number) => String(value).padStart(2, "0");
+
+// "2026-09-14"이나 "2026-09" → 2026년 9월
+export const monthOf = (date: string): Month => ({
+  year: Number(date.slice(0, 4)),
+  month: Number(date.slice(5, 7)),
+});
+
+export const toMonthKey = ({ year, month }: Month) => `${year}-${pad(month)}`;
+
+// 그 달 1일 ~ 말일
+export const getMonthRange = ({ year, month }: Month) => {
+  const lastDay = new Date(year, month, 0).getDate();
+  return {
+    startDate: `${year}-${pad(month)}-01`,
+    finishDate: `${year}-${pad(month)}-${pad(lastDay)}`,
+  };
+};
