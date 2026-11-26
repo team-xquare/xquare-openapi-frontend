@@ -1,4 +1,5 @@
 import styled from "@emotion/styled";
+import Link from "next/link";
 import { Xquare_colors } from "../../styles/colors";
 
 // 활용신청 목록(apply/page-style.ts)과 같은 모양을 쓰되, 그쪽 파일이 따로 바뀌는 중이라 여기에 복사해 둡니다.
@@ -113,19 +114,22 @@ export const UsageTable = styled.table`
   /* 본문 884px(1280px 화면)에서 시각·메서드·응답 코드·응답 시간이 잘리지 않게 나눈 비율.
      경로 열만 길면 말줄임으로 줄입니다. */
   th:nth-of-type(1) {
-    width: 24%;
+    width: 22%;
   }
   th:nth-of-type(2) {
-    width: 12%;
+    width: 11%;
   }
   th:nth-of-type(3) {
-    width: 36%;
+    width: 29%;
   }
   th:nth-of-type(4) {
-    width: 14%;
+    width: 13%;
   }
   th:nth-of-type(5) {
-    width: 14%;
+    width: 13%;
+  }
+  th:nth-of-type(6) {
+    width: 12%;
   }
 
   td {
@@ -137,6 +141,18 @@ export const UsageTable = styled.table`
     padding: 0 12px;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+`;
+
+export const DetailLink = styled(Link)`
+  color: ${Xquare_colors.purple[400]};
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  &:focus-visible {
+    outline: 2px solid ${Xquare_colors.purple[400]};
+    outline-offset: 3px;
   }
 `;
 

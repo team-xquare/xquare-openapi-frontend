@@ -114,6 +114,20 @@ function toUsageLog(response: UsageLogResponse): UsageLog {
   };
 }
 
+const STORAGE_KEY = "usage-log-rows";
+
+// 상세 화면이 서버 상세 API 없이 행을 찾을 수 있게 지금 페이지의 행을 id로 저장
+export function saveUsageLogs(logs: UsageLog[]) {
+  try {
+    sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(Object.fromEntries(logs.map((log) => [log.id, log]))),
+    );
+  } catch {
+    // 저장소를 쓸 수 없으면 상세에서 목록으로 안내함
+  }
+}
+
 // 최근 N일을 지금 기준 from ~ to로 만듦. 검색할 때마다 새로 만들어 새 기록도 포함되게 함
 export function createUsageLogRange(period: string) {
   const to = new Date();

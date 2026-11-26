@@ -10,6 +10,7 @@ import {
   USAGE_FIELD_LABELS,
   createUsageLogRange,
   fetchUsageLogs,
+  saveUsageLogs,
   usageLogErrorMessage,
   type UsageLogPage,
   type UsageLogQuery,
@@ -17,6 +18,7 @@ import {
 import {
   AlertBar,
   CellStatus,
+  DetailLink,
   EmptyCell,
   FilterBar,
   FilterSelect,
@@ -77,6 +79,8 @@ export default function UsageLogPage() {
     fetchUsageLogs(query, request.signal)
       .then((data) => {
         setLoaded({ query, data });
+        // 상세 화면에서 읽을 수 있게 지금 페이지의 행을 저장
+        saveUsageLogs(data.logs);
         setLoadError(null);
       })
       .catch((error: unknown) => {
@@ -221,6 +225,7 @@ export default function UsageLogPage() {
             <th scope="col">경로</th>
             <th scope="col">응답 코드</th>
             <th scope="col">응답 시간</th>
+            <th scope="col">상세</th>
           </tr>
         </thead>
         <tbody>
@@ -233,11 +238,19 @@ export default function UsageLogPage() {
                 <Status ok={log.status < 400}>{log.status}</Status>
               </td>
               <td>{log.durationMs}ms</td>
+              <td>
+                <DetailLink
+                  href={`/usage-log/${log.id}`}
+                  aria-label={`${log.calledAt} 사용 기록 상세`}
+                >
+                  상세
+                </DetailLink>
+              </td>
             </tr>
           ))}
           {rows.length === 0 && (
             <tr>
-              <EmptyCell colSpan={5}>
+              <EmptyCell colSpan={6}>
                 {errorText ? (
                   <CellStatus role="alert">
                     {errorText}
