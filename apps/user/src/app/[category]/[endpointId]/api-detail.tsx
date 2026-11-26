@@ -3,6 +3,7 @@
 import { useId, useState, type ReactNode } from "react";
 import { InfoList, type InfoListItem } from "../../../components";
 import { API_LICENSE_INFO, type ApiDetail } from "../../api-detail-content";
+import { MyApplicationStatus } from "./my-application-status";
 import {
   ApiBadge,
   ApiBadgeList,
@@ -143,7 +144,20 @@ export function ApiDetailView({ detail }: { detail: ApiDetail }) {
         </DetailSection>
 
         <DetailSection title="이용 조건 및 라이선스 정보">
-          <DetailList items={[...API_LICENSE_INFO, ...detail.accessInfo]} />
+          <DetailList
+            items={[
+              ...API_LICENSE_INFO,
+              ...detail.accessInfo,
+              ...(detail.field
+                ? [
+                    {
+                      label: "내 신청 상태",
+                      value: <MyApplicationStatus field={detail.field} />,
+                    },
+                  ]
+                : []),
+            ]}
+          />
         </DetailSection>
 
         <DetailSection title="Parameters">

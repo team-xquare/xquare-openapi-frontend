@@ -1,4 +1,5 @@
 import type { InfoListItem } from "../components";
+import type { ApiField } from "@/lib/projects-api";
 
 export interface ApiResponseExample {
   code: string;
@@ -16,6 +17,8 @@ export interface ApiDetail {
   detailInfo: InfoListItem[];
   // 분야마다 다른 이용 조건 (접근 단계 · 승인 방식 · 활용신청 단위)
   accessInfo: InfoListItem[];
+  // 활용신청 분야. 내 신청 상태를 찾는 데 씀 (신청이 필요 없는 공개 API면 없음)
+  field?: ApiField;
   parameters: InfoListItem[];
   responses: ApiResponseExample[];
   test: {
@@ -36,6 +39,7 @@ export const API_LICENSE_INFO: InfoListItem[] = [
 export const API_DETAILS: ApiDetail[] = [
   {
     category: "student",
+    field: "STUDENT",
     id: "get-student",
     title: "학생 조회",
     badges: ["JSON"],
