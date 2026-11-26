@@ -28,18 +28,12 @@ export const SCHEDULE_CONTENT_MAX_LENGTH = 1000;
 const schedulePath = (id: number | string) =>
   `/schedules/${encodeURIComponent(String(id))}`;
 
-// 기간 목록 조회는 Swagger에 없어서 급식 · 자습감독과 같은 형식(startDate · finishDate)으로 가정함.
-// 응답도 정해지지 않아 배열이나 { schedules } 둘 다 받음 (서버 확인 필요)
-export async function fetchSchedules(
+// 시작일 ~ 종료일(포함, 최대 92일) 일정. 나이스 일정과 학교 일정이 같이 옴.
+// Swagger에 API 키(X-API-Key)만 적혀 있어, 관리자 로그인 토큰으로 되는지 서버 확인이 필요함
+export const fetchSchedules = (
   range: { startDate: string; finishDate: string },
   signal?: AbortSignal,
-): Promise<ScheduleResponse[]> {
-  const response = await api.get<
-    ScheduleResponse[] | { schedules?: ScheduleResponse[] }
-  >(withQuery("/schedules", range), { signal });
-  if (Array.isArray(response)) return response;
-  return response?.schedules ?? [];
-}
+) => api.get<ScheduleResponse[]>(withQuery("/schedules", range), { signal });
 
 export const fetchSchedule = (id: number | string, signal?: AbortSignal) =>
   api.get<ScheduleResponse>(schedulePath(id), { signal });
