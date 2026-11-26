@@ -33,7 +33,7 @@ export interface TeacherResponse {
   // 맡은 동아리가 없으면 null
   club: ClubSummaryResponse | null;
   // 부장 여부
-  manager: boolean;
+  isManager: boolean;
 }
 
 export type TeacherSearch = {
@@ -48,15 +48,15 @@ export type TeacherSearch = {
   size?: number;
 };
 
-// 등록 · 수정 본문. 담임이 아니면 학년 · 반을 null로 보냄
+// 등록 · 수정 본문. 담임이 아니면 학년 · 반을 null로 보냄 (과목 · 직책 · 부장 여부는 필수)
 export interface TeacherRequest {
   name: string;
   grade: number | null;
   classNum: number | null;
-  subject: TeacherSubject | null;
+  subject: TeacherSubject;
   office: string;
-  position: TeacherPosition | null;
-  manager: boolean;
+  position: TeacherPosition;
+  isManager: boolean;
 }
 
 // 서버 TeacherRequest 검증과 같음

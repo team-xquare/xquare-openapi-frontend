@@ -61,7 +61,7 @@ export function TeacherForm({ teacher }: { teacher?: TeacherResponse }) {
   const initialSubject: TeacherSubject | "" = teacher?.subject ?? "";
   const initialOffice = teacher?.office ?? "";
   const initialPosition: TeacherPosition | "" = teacher?.position ?? "";
-  const initialLeader = teacher?.manager ?? false;
+  const initialLeader = teacher?.isManager ?? false;
   const initialGrade = teacher?.grade ? String(teacher.grade) : "";
   const initialClassNumber = teacher?.classNum ? String(teacher.classNum) : "";
   const initialHomeroom = initialGrade !== "" || initialClassNumber !== "";
@@ -137,7 +137,7 @@ export function TeacherForm({ teacher }: { teacher?: TeacherResponse }) {
       subject,
       office: office.trim(),
       position,
-      manager: isLeader,
+      isManager: isLeader,
     };
     try {
       if (teacher) {
