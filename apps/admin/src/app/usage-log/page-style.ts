@@ -65,7 +65,7 @@ export const FilterBar = styled.form`
 export const SearchInput = styled.input`
   ${CONTROL}
   flex: 1 1 240px;
-  min-width: 240px;
+  min-width: 0;
   padding: 0 16px;
 
   &::placeholder {
@@ -110,28 +110,22 @@ export const UsageTable = styled.table`
     text-align: left;
   }
 
-  /* 본문 884px(1280px 화면)에서 시각·응답·분야·신청자·상세가 잘리지 않게 나눈 비율.
-     호출한 API와 프로젝트 · 키 열만 길면 말줄임으로 줄입니다. */
+  /* 본문 884px(1280px 화면)에서 시각·메서드·응답 코드·응답 시간이 잘리지 않게 나눈 비율.
+     경로 열만 길면 말줄임으로 줄입니다. */
   th:nth-of-type(1) {
-    width: 17%;
+    width: 24%;
   }
   th:nth-of-type(2) {
-    width: 11%;
+    width: 12%;
   }
   th:nth-of-type(3) {
-    width: 18%;
+    width: 36%;
   }
   th:nth-of-type(4) {
-    width: 9%;
+    width: 14%;
   }
   th:nth-of-type(5) {
-    width: 20%;
-  }
-  th:nth-of-type(6) {
-    width: 18%;
-  }
-  th:nth-of-type(7) {
-    width: 7%;
+    width: 14%;
   }
 
   td {
@@ -146,36 +140,32 @@ export const UsageTable = styled.table`
   }
 `;
 
-// 오류 코드가 이 화면에서 가장 중요한 정보라 말줄임 대신 줄을 바꿔 전부 보여줌
-// ("500 INTERNAL_SERVER_ERROR"처럼 긴 코드는 좁은 폭에서 열보다 김)
+// 응답 코드는 성공이면 초록, 실패면 빨강으로 구분
 export const Status = styled.span<{ ok: boolean }>`
   color: ${({ ok }) => (ok ? OK_COLOR : Xquare_colors.red[600])};
-  display: block;
   font-weight: 700;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-  white-space: normal;
 `;
 
-export const DetailButton = styled.button`
-  appearance: none;
-  background: transparent;
-  border: 0;
-  color: ${Xquare_colors.purple[400]};
-  cursor: pointer;
-  font: inherit;
+// 목록 위에 띄우는 불러오기 실패 알림
+export const AlertBar = styled.div`
+  align-items: center;
+  background: ${Xquare_colors.slate[50]};
+  border: ${BORDER};
+  border-radius: 8px;
+  color: ${Xquare_colors.red[600]};
+  display: flex;
+  flex-wrap: wrap;
   font-size: 15px;
-  padding: 8px 0;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+`;
 
-  &:focus-visible {
-    outline: 2px solid ${Xquare_colors.purple[400]};
-    outline-offset: 3px;
-  }
-
-  &:disabled {
-    color: ${Xquare_colors.slate[400]};
-    cursor: not-allowed;
-  }
+export const CellStatus = styled.div`
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 `;
 
 export const EmptyCell = styled.td`

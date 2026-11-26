@@ -1,187 +1,156 @@
-// API 연동은 backend 사용 기록 조회 API 이후 (OPN-109 연동 / OPN-106). 그 전까지는 시안 기준 목업을 씁니다.
-export type UsageLog = {
+import { ApiError } from "@xquare/api";
+import { api } from "@/lib/api";
+import { errorMessage } from "../notice-content";
+
+export interface UsageLog {
   id: string;
-  api: string;
-  field: string;
-  status: string;
-  // 성공/실패는 응답 문자열 앞자리로 추측하지 않고 따로 둡니다.
-  ok: boolean;
-  applicant: string;
+  // 한국 시각 "2026-11-20 13:05:12"
   calledAt: string;
-  project: string;
-  // 단계 필터용. 키가 없는 공개 API는 "none"입니다.
-  stage: "test" | "prod" | "none";
+  method: string;
+  route: string;
+  status: number;
+  durationMs: number;
+}
+
+export interface UsageLogPage {
+  logs: UsageLog[];
+  // 서버 페이지 번호 (0부터)
+  page: number;
+  totalCount: number;
+  totalPage: number;
+}
+
+// 검색 버튼을 누를 때 정해지는 조건. 페이지를 넘기거나 다시 불러와도 from·to는 그대로 씀
+export interface UsageLogQuery {
+  // 조회 시작(포함) · 종료(제외), ISO 문자열
+  from: string;
+  to: string;
+  method: string;
+  // "all" 또는 정확한 상태 코드
+  status: string;
+  // API 경로 일부 (예: "/notices"). 빈 문자열이면 거르지 않음
+  api: string;
+  // "all" 또는 분야 (STUDENT 등)
+  field: string;
+  // 서버 페이지 번호 (0부터)
+  page: number;
+}
+
+// 서버 API 응답 (GET /admin/api-usage-logs)
+interface UsageLogResponse {
+  id: number;
+  // 서버가 주는 date-time 문자열 (오프셋이 있을 수도 없을 수도 있음)
+  occurredAt: string;
+  method: string;
+  route: string;
+  status: number;
+  durationMs: number;
+}
+
+interface UsageLogListResponse {
+  content: UsageLogResponse[];
+  page: number;
+  size: number;
+  totalCount: number;
+  totalPage: number;
+}
+
+export const PAGE_SIZE = 20;
+// 서버가 받는 API 경로 검색어 최대 길이
+export const API_SEARCH_MAX_LENGTH = 160;
+
+// 서버 field 조건에 넣을 수 있는 분야. 공개 급식처럼 분야가 없는 기록은 분야를 고르면 빠짐
+export const USAGE_FIELD_LABELS: Record<string, string> = {
+  STUDENT: "학생",
+  TEACHER: "교직원",
+  CLUB: "동아리",
+  SCHEDULE: "일정",
+  STUDY_SUPERVISOR: "자습 감독",
 };
+// 서버가 받는 가장 큰 page 값
+export const MAX_PAGE_INDEX = 1000;
 
-// 기간 필터의 기준 시각입니다. 목업 호출 시각이 2026-11-20 근처라
-// 지금 날짜로 계산하면 목업이 모두 사라지므로, 목업에서 가장 최근 시각 직후로 고정합니다.
-// API를 연동하면 이 값 대신 현재 시각을 씁니다.
-export const REFERENCE_TIME = "2026-11-20 14:00:00";
+const DAY = 24 * 60 * 60 * 1000;
+// 서버 조회 기간은 최대 31일이라 30일까지만 고르게 함
+export const PERIOD_DAYS: Record<string, number> = { "1d": 1, "7d": 7, "30d": 30 };
 
-export const USAGE_LOGS: UsageLog[] = [
-  {
-    id: "log-1",
-    api: "GET /students/{studentId}",
-    field: "학생",
-    status: "403 FORBIDDEN",
-    ok: false,
-    applicant: "전재준",
-    calledAt: "2026-11-20 13:05:12",
-    project: "team-xquare · xq_test_8f3a••••",
-    stage: "test",
-  },
-  {
-    id: "log-2",
-    api: "GET /clubs",
-    field: "동아리",
-    status: "200 OK",
-    ok: true,
-    applicant: "전재준",
-    calledAt: "2026-11-20 13:04:58",
-    project: "team-xquare · xq_test_8f3a••••",
-    stage: "test",
-  },
-  {
-    id: "log-3",
-    api: "학교 통합 일정 조회",
-    field: "일정",
-    status: "200 OK",
-    ok: true,
-    applicant: "전재준",
-    calledAt: "2026-11-20 12:41:03",
-    project: "dsm-timetable · xq_test_51bd••••",
-    stage: "test",
-  },
-  {
-    id: "log-4",
-    api: "월간 급식 정보 조회",
-    field: "급식",
-    status: "200 OK",
-    ok: true,
-    applicant: "—",
-    calledAt: "2026-11-20 12:30:27",
-    project: "키 없음 (공개 API)",
-    stage: "none",
-  },
-  {
-    id: "log-5",
-    api: "자습 감독 정보 일별로 조회",
-    field: "자습 감독",
-    status: "401 INVALID_API_KEY",
-    ok: false,
-    applicant: "정하준",
-    calledAt: "2026-11-20 11:58:40",
-    project: "자습 알림 · xq_test_0c71•••• (만료)",
-    stage: "test",
-  },
-  {
-    id: "log-6",
-    api: "학생 정보 목록 조회",
-    field: "학생",
-    status: "200 OK",
-    ok: true,
-    applicant: "정하준",
-    calledAt: "2026-11-20 10:12:45",
-    project: "dsm-timetable · xq_test_51bd••••",
-    stage: "test",
-  },
-  {
-    id: "log-7",
-    api: "일간 급식 정보 조회",
-    field: "급식",
-    status: "200 OK",
-    ok: true,
-    applicant: "—",
-    calledAt: "2026-11-20 09:02:11",
-    project: "키 없음 (공개 API)",
-    stage: "none",
-  },
-  {
-    id: "log-8",
-    api: "GET /clubs/{clubId}",
-    field: "동아리",
-    status: "404 NOT_FOUND",
-    ok: false,
-    applicant: "전재준",
-    calledAt: "2026-11-19 17:20:33",
-    project: "team-xquare · xq_test_8f3a••••",
-    stage: "test",
-  },
-  {
-    id: "log-9",
-    api: "학교 통합 일정 조회",
-    field: "일정",
-    status: "200 OK",
-    ok: true,
-    applicant: "전재준",
-    calledAt: "2026-11-19 15:44:09",
-    project: "dsm-timetable · xq_test_51bd••••",
-    stage: "test",
-  },
-  {
-    id: "log-10",
-    api: "자습 감독 정보 일별로 조회",
-    field: "자습 감독",
-    status: "200 OK",
-    ok: true,
-    applicant: "정하준",
-    calledAt: "2026-11-18 21:15:00",
-    project: "자습 알림 · xq_live_4d92••••",
-    stage: "prod",
-  },
-  {
-    id: "log-11",
-    api: "GET /students",
-    field: "학생",
-    status: "500 INTERNAL_SERVER_ERROR",
-    ok: false,
-    applicant: "박서준",
-    calledAt: "2026-11-17 14:22:51",
-    project: "급식봇 · xq_live_77e2••••",
-    stage: "prod",
-  },
-  {
-    id: "log-12",
-    api: "월간 급식 정보 조회",
-    field: "급식",
-    status: "200 OK",
-    ok: true,
-    applicant: "박서준",
-    calledAt: "2026-11-15 12:10:05",
-    project: "급식봇 · xq_live_77e2••••",
-    stage: "prod",
-  },
-  {
-    id: "log-13",
-    api: "GET /clubs",
-    field: "동아리",
-    status: "200 OK",
-    ok: true,
-    applicant: "전재준",
-    calledAt: "2026-11-09 16:33:47",
-    project: "team-xquare · xq_test_8f3a••••",
-    stage: "test",
-  },
-  {
-    id: "log-14",
-    api: "학교 통합 일정 조회",
-    field: "일정",
-    status: "429 TOO_MANY_REQUESTS",
-    ok: false,
-    applicant: "전재준",
-    calledAt: "2026-11-03 11:08:20",
-    project: "dsm-timetable · xq_test_51bd••••",
-    stage: "test",
-  },
-  {
-    id: "log-15",
-    api: "GET /students/{studentId}",
-    field: "학생",
-    status: "200 OK",
-    ok: true,
-    applicant: "전재준",
-    calledAt: "2026-10-12 10:00:00",
-    project: "team-xquare · xq_test_8f3a••••",
-    stage: "test",
-  },
-];
+const SEOUL_FORMAT = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
+
+// "2026-11-20T04:05:12Z" 처럼 끝에 Z나 +09:00 같은 오프셋이 붙어 있는지
+const HAS_OFFSET = /(Z|[+-]\d{2}(:?\d{2})?)$/i;
+
+// 오프셋이 있으면 브라우저 시간대와 상관없이 한국 시각으로 바꿔 "YYYY-MM-DD HH:mm:ss"로,
+// 오프셋이 없으면 이미 한국 시각으로 보고 그대로 모양만 바꿈
+export function formatCalledAt(value: string) {
+  if (HAS_OFFSET.test(value)) {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      const parts = Object.fromEntries(
+        SEOUL_FORMAT.formatToParts(date).map((part) => [part.type, part.value]),
+      );
+      return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+    }
+  }
+  return value.slice(0, 19).replace("T", " ");
+}
+
+function toUsageLog(response: UsageLogResponse): UsageLog {
+  return {
+    id: String(response.id),
+    calledAt: formatCalledAt(response.occurredAt),
+    method: response.method,
+    route: response.route,
+    status: response.status,
+    durationMs: response.durationMs,
+  };
+}
+
+// 최근 N일을 지금 기준 from ~ to로 만듦. 검색할 때마다 새로 만들어 새 기록도 포함되게 함
+export function createUsageLogRange(period: string) {
+  const to = new Date();
+  const from = new Date(to.getTime() - PERIOD_DAYS[period] * DAY);
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
+export async function fetchUsageLogs(
+  query: UsageLogQuery,
+  signal?: AbortSignal,
+): Promise<UsageLogPage> {
+  const params = new URLSearchParams({
+    from: query.from,
+    to: query.to,
+    page: String(query.page),
+    size: String(PAGE_SIZE),
+  });
+  if (query.method !== "all") params.set("method", query.method);
+  if (query.status !== "all") params.set("status", query.status);
+  // 서버는 빈 문자열 · 공백만 있는 검색어를 400으로 막으므로 그런 값은 보내지 않음
+  const apiSearch = query.api.trim();
+  if (apiSearch) params.set("api", apiSearch);
+  if (query.field !== "all") params.set("field", query.field);
+  const response = await api.get<UsageLogListResponse>(
+    `/admin/api-usage-logs?${params}`,
+    { signal },
+  );
+  return {
+    logs: response.content.map(toUsageLog),
+    page: response.page,
+    totalCount: response.totalCount,
+    totalPage: response.totalPage,
+  };
+}
+
+// 권한이 없으면 서버 문구 대신 알기 쉬운 문구, 그 밖에는 공지 화면과 같은 처리
+export const usageLogErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof ApiError && error.status === 403
+    ? "사용 기록을 볼 권한이 없습니다."
+    : errorMessage(error, fallback);
