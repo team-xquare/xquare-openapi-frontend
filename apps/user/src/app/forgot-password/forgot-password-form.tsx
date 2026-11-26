@@ -29,12 +29,10 @@ import { VerifyInputWrap } from "../signup/page-style";
 import {
   INITIAL_SIGNUP_FORM,
   SIGNUP_ERROR_MESSAGES,
-  sanitizeStudentId,
   validateSignupForm,
   type SignupFormValues,
 } from "../signup/signup-validation";
 
-const LAST_STEP = 3;
 const FADE_DURATION = 180;
 const ERROR_COLOR = String(Xquare_colors.red[500]);
 const NOTICE_COLOR = String(Xquare_colors.gray[600]);
@@ -46,7 +44,7 @@ const VERIFY_EXPIRED_MESSAGE =
   "이메일 인증 시간이 지났습니다. 인증코드를 다시 받아주세요.";
 const RESENT_MESSAGE = "인증코드를 다시 보냈습니다.";
 
-type ValidatedField = "email" | "verifyCode" | "studentId" | "name" | "password";
+type ValidatedField = "email" | "verifyCode" | "password";
 // 서버 오류를 보여줄 입력칸
 type ServerErrorField = keyof SignupFormValues;
 type PendingAction = "send" | "resend" | "verify" | "reset";
@@ -61,7 +59,7 @@ const messageOf = (error: unknown) =>
   error instanceof ApiError ? error.message : DEFAULT_ERROR_MESSAGE;
 
 // 입력 규칙이 회원가입과 같아 폼 값과 검증을 그대로 씀 (아이디 칸은 쓰지 않음)
-// 1 이메일·인증코드 → 2 학번·이름 → 3 새 비밀번호
+// 1 이메일·인증코드 → 2 새 비밀번호
 export function ForgotPasswordForm() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -82,7 +80,6 @@ export function ForgotPasswordForm() {
   const attemptRef = useRef<AbortController | null>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const verifyCodeRef = useRef<HTMLInputElement>(null);
-  const studentIdRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
   const validations = validateSignupForm(form);
@@ -90,8 +87,7 @@ export function ForgotPasswordForm() {
 
   const isNextDisabled = {
     1: !validations.email || (showVerifyInput && !validations.verifyCode),
-    2: !validations.studentId || !validations.name,
-    3: !validations.password || !validations.passwordMatch,
+    2: !validations.password || !validations.passwordMatch,
   }[step];
 
   const submitLabel =
@@ -100,9 +96,7 @@ export function ForgotPasswordForm() {
       ? showVerifyInput
         ? "인증코드 검증"
         : "인증코드 발송"
-      : step === LAST_STEP
-        ? "비밀번호 변경"
-        : "다음으로");
+      : "비밀번호 변경");
 
   // 서버 오류를 먼저 보여주고, 없으면 입력값이 규칙에 맞지 않을 때만 형식 오류를 보여줌
   const errorFor = (key: ValidatedField) =>
@@ -144,8 +138,7 @@ export function ForgotPasswordForm() {
 
     const focusMap: Record<number, typeof emailRef> = {
       1: showVerifyInput ? verifyCodeRef : emailRef,
-      2: studentIdRef,
-      3: passwordRef,
+      2: passwordRef,
     };
 
     focusMap[step]?.current?.focus();
@@ -166,16 +159,12 @@ export function ForgotPasswordForm() {
     (key: keyof SignupFormValues) => (event: ChangeEvent<HTMLInputElement>) => {
       // 요청 중에는 보낸 값과 화면 값이 달라지지 않게 입력을 무시함 (포커스는 그대로 둠)
       if (isPending) return;
-      let value = event.target.value;
+      const value = event.target.value;
 
       if (key === "email") {
         setShowVerifyInput(false);
         setIsEmailVerified(false);
         setEmailVerifiedToken("");
-      }
-
-      if (key === "studentId") {
-        value = sanitizeStudentId(value);
       }
 
       clearServerError(key);
@@ -286,14 +275,6 @@ export function ForgotPasswordForm() {
       },
     );
 
-  // 이메일 인증을 마친 뒤에는 1단계로 돌아갈 수 없음
-  const canGoBack = step > 2;
-
-  const handlePrev = () => {
-    if (!canGoBack || isFading || isPending) return;
-    changeStepSmooth(step - 1);
-  };
-
   const handleResend = () => {
     if (isPending || isFading || isEmailVerified) return;
     setServerErrors({});
@@ -316,11 +297,6 @@ export function ForgotPasswordForm() {
     if (step === 1) {
       setServerErrors({});
       void (showVerifyInput ? verifyCode() : sendCode("send"));
-      return;
-    }
-
-    if (step < LAST_STEP) {
-      changeStepSmooth(step + 1);
       return;
     }
 
@@ -367,33 +343,6 @@ export function ForgotPasswordForm() {
         );
 
       case 2:
-        return (
-          <>
-            <Input_text
-              ref={studentIdRef}
-              value={form.studentId}
-              onChange={handleChange("studentId")}
-              label="학번"
-              placeholder="학번을 입력해주세요"
-              inputMode="numeric"
-              autoComplete="off"
-              title={errorFor("studentId")}
-              titleColor={ERROR_COLOR}
-            />
-
-            <Input_text
-              value={form.name}
-              onChange={handleChange("name")}
-              label="이름"
-              placeholder="이름을 입력해주세요"
-              autoComplete="name"
-              title={errorFor("name")}
-              titleColor={ERROR_COLOR}
-            />
-          </>
-        );
-
-      case 3:
         return (
           <>
             <Input_text
@@ -444,19 +393,6 @@ export function ForgotPasswordForm() {
           <Button_square type="submit" disabled={isNextDisabled || isPending}>
             {submitLabel}
           </Button_square>
-
-          {canGoBack && (
-            <AuthLinkRow>
-              잘못입력하셨나요?
-              <AuthLinkButton
-                type="button"
-                onClick={handlePrev}
-                disabled={isPending}
-              >
-                뒤로가기
-              </AuthLinkButton>
-            </AuthLinkRow>
-          )}
 
           {/* 인증코드를 보낸 뒤에는 이메일 칸이 잠기므로 다시 보내거나 이메일을 고칠 수 있게 함 */}
           {step === 1 && showVerifyInput && !isEmailVerified && (
