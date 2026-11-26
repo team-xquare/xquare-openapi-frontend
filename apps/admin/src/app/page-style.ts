@@ -117,7 +117,7 @@ export const CardMeta = styled.span`
   font-size: 13px;
 `;
 
-export const SmallLinkButton = styled(Link)`
+const SMALL_BUTTON = `
   align-items: center;
   background: ${Xquare_colors.white};
   border: 1px solid ${Xquare_colors.slate[400]};
@@ -136,6 +136,17 @@ export const SmallLinkButton = styled(Link)`
     outline: 2px solid ${Xquare_colors.purple[400]};
     outline-offset: 2px;
   }
+`;
+
+export const SmallLinkButton = styled(Link)`
+  ${SMALL_BUTTON}
+`;
+
+// 불러오지 못한 항목의 다시 시도. 옆의 링크 버튼과 같은 모양
+export const RetryButton = styled.button`
+  ${SMALL_BUTTON}
+  cursor: pointer;
+  font-family: inherit;
 `;
 
 // 카드 제목 줄 오른쪽 끝에 붙는 이동 버튼
