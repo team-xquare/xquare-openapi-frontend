@@ -151,10 +151,23 @@ export const ReasonTextarea = styled.textarea`
   }
 `;
 
-export const ReasonHelp = styled.p`
-  color: ${Xquare_colors.slate[600]};
+export const ReasonHelp = styled.p<{ $isError?: boolean }>`
+  color: ${({ $isError }) =>
+    $isError ? Xquare_colors.red[600] : Xquare_colors.slate[600]};
   font-size: 13px;
   margin: 8px 0 0;
+`;
+
+// 승인 · 반려 결과 안내 (성공은 초록, 실패는 빨강)
+export const ActionMessage = styled.p<{ $isError: boolean }>`
+  color: ${({ $isError }) =>
+    $isError ? Xquare_colors.red[600] : Xquare_colors.green[700]};
+  font-size: 14px;
+  margin: 16px 0 0;
+  max-width: 1080px;
+  /* 안내가 없을 때도 자리를 남겨 둬야 스크린 리더가 새 안내를 읽음 */
+  min-height: 1.5em;
+  text-align: right;
 `;
 
 export const TierValue = styled.span<{ $tier: "제한" | "교내" }>`
@@ -162,13 +175,31 @@ export const TierValue = styled.span<{ $tier: "제한" | "교내" }>`
     $tier === "제한" ? Xquare_colors.orange[600] : Xquare_colors.slate[900]};
 `;
 
-export const StatusValue = styled.span<{
-  $status: "승인 대기" | "반려" | "승인 완료";
-}>`
-  color: ${({ $status }) =>
-    $status === "승인 대기"
-      ? Xquare_colors.orange[600]
-      : $status === "반려"
-        ? Xquare_colors.red[600]
-        : Xquare_colors.green[700]};
+// 활용신청을 불러오는 중이거나 불러오지 못했을 때
+export const LoadStatus = styled.div`
+  color: ${Xquare_colors.slate[600]};
+  font-size: 14px;
+
+  p {
+    margin: 0 0 16px;
+  }
+`;
+
+export const LoadButton = styled.button`
+  background: ${Xquare_colors.white};
+  border: ${STRONG_BORDER};
+  border-radius: 9px;
+  color: ${Xquare_colors.slate[900]};
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  padding: 13px 0;
+  width: 114px;
+
+  &:hover,
+  &:focus-visible {
+    border-color: ${Xquare_colors.purple[400]};
+    color: ${Xquare_colors.purple[400]};
+    outline: none;
+  }
 `;

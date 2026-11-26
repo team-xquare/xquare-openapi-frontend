@@ -67,6 +67,11 @@ export const SearchInput = styled.input`
   &::placeholder {
     color: ${Xquare_colors.slate[400]};
   }
+
+  &:disabled {
+    background: ${Xquare_colors.slate[50]};
+    cursor: not-allowed;
+  }
 `;
 
 export const FilterSelect = styled.select`
@@ -75,6 +80,11 @@ export const FilterSelect = styled.select`
   padding: 0 38px 0 16px;
   /* "첫 신청 (키 발급)"처럼 긴 옵션도 잘리지 않는 폭 */
   width: 184px;
+
+  &:disabled {
+    background: ${Xquare_colors.slate[50]};
+    cursor: not-allowed;
+  }
 `;
 
 export const SearchButton = styled.button`
@@ -82,11 +92,47 @@ export const SearchButton = styled.button`
   cursor: pointer;
   padding: 0 20px;
 
+  &:disabled {
+    background: ${Xquare_colors.slate[50]};
+    cursor: not-allowed;
+  }
+
   &:hover,
   &:focus-visible {
     border-color: ${Xquare_colors.purple[400]};
     color: ${Xquare_colors.purple[400]};
   }
+`;
+
+export const RetryButton = styled.button`
+  ${CONTROL}
+  cursor: pointer;
+  height: 40px;
+  padding: 0 16px;
+
+  &:hover,
+  &:focus-visible {
+    border-color: ${Xquare_colors.purple[400]};
+    color: ${Xquare_colors.purple[400]};
+  }
+`;
+
+export const CellStatus = styled.div`
+  align-items: center;
+  display: inline-flex;
+  gap: 12px;
+`;
+
+// 서버에 아직 없는 값(신청자 · 구분)의 빈 칸 표시
+export const PendingValue = styled.span`
+  color: ${Xquare_colors.slate[400]};
+`;
+
+// 서버 연동 전이라 쓸 수 없는 필터 · 검색 안내
+export const FilterNote = styled.p`
+  color: ${Xquare_colors.slate[600]};
+  font-size: 13px;
+  margin: -8px 0 20px;
 `;
 
 export const ApplicationTable = styled.table`
@@ -147,33 +193,17 @@ export const TierText = styled.span<{ $tier: "제한" | "교내" }>`
       : Xquare_colors.slate[600]};
 `;
 
-// 상태: 승인 대기는 주황 굵게, 반려는 빨강, 승인 완료는 초록
+// 상태: 승인 대기는 주황, 승인은 초록, 반려는 빨강
 export const StatusText = styled.span<{
-  $status: "승인 대기" | "반려" | "승인 완료";
+  $status: "PENDING" | "APPROVED" | "REJECTED";
 }>`
   color: ${({ $status }) =>
-    $status === "승인 대기"
+    $status === "PENDING"
       ? Xquare_colors.orange[600]
-      : $status === "반려"
-        ? Xquare_colors.red[600]
-        : Xquare_colors.green[700]};
-  font-weight: ${({ $status }) => ($status === "승인 대기" ? 700 : 400)};
-`;
-
-export const DetailButton = styled.button`
-  appearance: none;
-  background: transparent;
-  border: 0;
-  color: ${Xquare_colors.purple[400]};
-  cursor: pointer;
-  font: inherit;
-  font-size: 15px;
-  padding: 8px 0;
-
-  &:focus-visible {
-    outline: 2px solid ${Xquare_colors.purple[400]};
-    outline-offset: 3px;
-  }
+      : $status === "APPROVED"
+        ? Xquare_colors.green[700]
+        : Xquare_colors.red[600]};
+  font-weight: 700;
 `;
 
 export const DetailLink = styled(Link)`
@@ -238,55 +268,3 @@ export const PageButton = styled.button`
   }
 `;
 
-export const ApplicationDialog = styled.dialog`
-  border: 0;
-  border-radius: 16px;
-  box-shadow: 0 12px 40px ${Xquare_colors.black}24;
-  color: ${Xquare_colors.slate[900]};
-  margin: auto;
-  max-width: calc(100vw - 40px);
-  padding: 32px;
-  width: 520px;
-
-  &::backdrop {
-    background: ${Xquare_colors.black}80;
-  }
-`;
-
-export const DialogTitle = styled.h2`
-  font-size: 22px;
-  margin: 0 0 24px;
-`;
-
-export const DetailList = styled.dl`
-  display: grid;
-  gap: 14px;
-  margin: 0;
-`;
-
-export const DetailRow = styled.div`
-  display: grid;
-  gap: 16px;
-  grid-template-columns: 92px 1fr;
-  font-size: 14px;
-
-  dt {
-    color: ${Xquare_colors.slate[600]};
-  }
-  dd {
-    margin: 0;
-    overflow-wrap: anywhere;
-  }
-`;
-
-export const DialogClose = styled.button`
-  background: ${Xquare_colors.white};
-  border: ${STRONG_BORDER};
-  border-radius: 8px;
-  color: ${Xquare_colors.slate[900]};
-  cursor: pointer;
-  display: block;
-  font: inherit;
-  margin: 28px 0 0 auto;
-  padding: 11px 20px;
-`;

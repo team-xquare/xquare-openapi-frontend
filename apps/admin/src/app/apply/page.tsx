@@ -1,13 +1,24 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { APPLICATIONS, canReview } from "./apply-content";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { errorMessage, isAbortError } from "../notice-content";
+import {
+  FIELD_LABELS,
+  STATUS_LABELS,
+  fetchApplications,
+  type ApplicationPage,
+  type ApplicationStatus,
+} from "./apply-content";
 import {
   ApplicationTable,
   ApplyPage,
+  CellStatus,
   DetailLink,
   EmptyCell,
   FilterBar,
+  FilterNote,
   FilterSelect,
   PageButton,
   PageDescription,
@@ -15,6 +26,8 @@ import {
   PageList,
   PageTitle,
   Pager,
+  PendingValue,
+  RetryButton,
   SearchButton,
   SearchInput,
   StatusText,
@@ -22,51 +35,62 @@ import {
   Total,
 } from "./page-style";
 
-const PAGE_SIZE = 5;
-
 export default function ApplyListPage() {
-  const [keyword, setKeyword] = useState("");
-  const [fieldFilter, setFieldFilter] = useState("all");
-  const [kindFilter, setKindFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [tierFilter, setTierFilter] = useState("all");
-  const [query, setQuery] = useState({
-    keyword: "",
-    field: "all",
-    kind: "all",
-    status: "all",
-    tier: "all",
-  });
-  const [page, setPage] = useState(1);
+  const router = useRouter();
+  const [statusFilter, setStatusFilter] = useState("");
+  // 서버 page는 0부터. 화면에는 1부터 보여 줌
+  const [page, setPage] = useState(0);
+  // 바뀌면 목록을 다시 불러옴 (다시 시도)
+  const [reloadKey, setReloadKey] = useState(0);
+  // 어떤 조건으로 받은 목록인지 key로 구분해, 조건이 바뀐 직후에 이전 목록이 보이지 않게 함
+  const [loaded, setLoaded] = useState<{
+    key: string;
+    data: ApplicationPage;
+  } | null>(null);
+  const [loadError, setLoadError] = useState<{
+    key: string;
+    message: string;
+  } | null>(null);
 
-  const filtered = APPLICATIONS.filter(
-    (application) =>
-      (!query.keyword ||
-        application.applicant.includes(query.keyword) ||
-        application.project.includes(query.keyword)) &&
-      (query.field === "all" || application.field === query.field) &&
-      // 구분은 "첫 신청 (키 발급)"처럼 뒤에 설명이 붙어 앞부분만 비교
-      (query.kind === "all" || application.kind.startsWith(query.kind)) &&
-      (query.status === "all" || application.status === query.status) &&
-      (query.tier === "all" || application.tier === query.tier),
-  );
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
-  const rows = filtered.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
-  );
+  const key = `${statusFilter}|${page}|${reloadKey}`;
 
-  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setQuery({
-      keyword: keyword.trim(),
-      field: fieldFilter,
-      kind: kindFilter,
-      status: statusFilter,
-      tier: tierFilter,
-    });
-    setPage(1);
+  // 다른 화면에서 돌아와 다시 보일 때도 effect가 다시 돌아 최신 목록을 받음
+  useEffect(() => {
+    // 로그인 여부는 저장소를 읽어야 해서 렌더 중이 아니라 effect에서 확인
+    if (!api.auth.isLoggedIn()) {
+      router.replace("/login");
+      return;
+    }
+    const request = new AbortController();
+    fetchApplications({ status: statusFilter, page }, request.signal)
+      .then((data) => {
+        setLoaded({ key, data });
+        // 다시 불러왔더니 목록이 줄어 지금 페이지가 없어졌으면 마지막 페이지로 옮김
+        if (data.totalPage > 0 && page >= data.totalPage) {
+          setPage(data.totalPage - 1);
+        }
+        setLoadError(null);
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error) || request.signal.aborted) return;
+        setLoadError({
+          key,
+          message: errorMessage(error, "활용신청 목록을 불러오지 못했습니다."),
+        });
+      });
+    return () => request.abort();
+  }, [router, key, statusFilter, page]);
+
+  const current = loaded?.key === key ? loaded.data : null;
+  const rows = current?.applications ?? [];
+  const errorHere = loadError?.key === key ? loadError.message : "";
+  // 페이지를 바꿔 불러오는 동안에도 페이저가 깜빡이지 않도록 마지막으로 받은 값을 씀
+  const pageCount = Math.max(1, loaded?.data.totalPage ?? 1);
+  const currentPage = Math.min(page, pageCount - 1);
+
+  const retry = () => {
+    setLoadError(null);
+    setReloadKey((value) => value + 1);
   };
 
   return (
@@ -81,56 +105,78 @@ export default function ApplyListPage() {
         </PageDescription>
       </PageHead>
 
-      <FilterBar role="search" onSubmit={handleSearch}>
+      <FilterBar role="search">
         <SearchInput
           type="search"
-          value={keyword}
           placeholder="신청자 또는 프로젝트명으로 검색"
           aria-label="신청자 또는 프로젝트명 검색"
-          onChange={(event) => setKeyword(event.target.value)}
+          aria-describedby="filter-pending-note"
+          disabled
         />
+        {/* 서버 목록 API는 상태 조건만 받음. 분야 · 구분 · 단계 · 검색은 아직 없어서 쓸 수 없음 */}
         <FilterSelect
           aria-label="분야 필터"
-          value={fieldFilter}
-          onChange={(event) => setFieldFilter(event.target.value)}
+          aria-describedby="filter-pending-note"
+          title="서버 연동 준비 중"
+          disabled
         >
-          <option value="all">분야 전체</option>
-          <option value="학생">학생</option>
-          <option value="교직원">교직원</option>
-          <option value="자습 감독">자습 감독</option>
-          <option value="일정">일정</option>
-          <option value="동아리">동아리</option>
+          <option>분야 전체</option>
         </FilterSelect>
         <FilterSelect
           aria-label="구분 필터"
-          value={kindFilter}
-          onChange={(event) => setKindFilter(event.target.value)}
+          aria-describedby="filter-pending-note"
+          title="서버 연동 준비 중"
+          disabled
         >
-          <option value="all">구분 전체</option>
-          <option value="첫 신청">첫 신청 (키 발급)</option>
-          <option value="분야 추가">분야 추가</option>
+          <option>구분 전체</option>
         </FilterSelect>
         <FilterSelect
           aria-label="상태 필터"
           value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
+          onChange={(event) => {
+            setStatusFilter(event.target.value);
+            setPage(0);
+          }}
         >
-          <option value="all">상태 전체</option>
-          <option value="승인 대기">승인 대기</option>
-          <option value="승인 완료">승인 완료</option>
-          <option value="반려">반려</option>
+          <option value="">상태 전체</option>
+          {(Object.keys(STATUS_LABELS) as ApplicationStatus[]).map(
+            (status) => (
+              <option key={status} value={status}>
+                {STATUS_LABELS[status]}
+              </option>
+            ),
+          )}
         </FilterSelect>
         <FilterSelect
           aria-label="단계 필터"
-          value={tierFilter}
-          onChange={(event) => setTierFilter(event.target.value)}
+          aria-describedby="filter-pending-note"
+          title="서버 연동 준비 중"
+          disabled
         >
-          <option value="all">단계 전체</option>
-          <option value="제한">제한</option>
-          <option value="교내">교내</option>
+          <option>단계 전체</option>
         </FilterSelect>
-        <SearchButton type="submit">검색</SearchButton>
+        <SearchButton
+          type="button"
+          aria-describedby="filter-pending-note"
+          title="서버 연동 준비 중"
+          disabled
+        >
+          검색
+        </SearchButton>
       </FilterBar>
+      <FilterNote id="filter-pending-note">
+        검색과 분야 · 구분 · 단계 필터는 서버 API가 준비되면 사용할 수 있습니다.
+      </FilterNote>
+
+      {/* 목록이 이미 보이는데 다시 불러오기가 실패하면 빈 행 자리가 없으므로 표 위에 알림 */}
+      {errorHere && rows.length > 0 && (
+        <CellStatus role="alert">
+          {errorHere} 지금 보이는 목록은 최신이 아닐 수 있습니다.
+          <RetryButton type="button" onClick={retry}>
+            다시 시도
+          </RetryButton>
+        </CellStatus>
+      )}
 
       <ApplicationTable aria-label="활용신청 목록">
         <thead>
@@ -138,70 +184,97 @@ export default function ApplyListPage() {
             <th scope="col">프로젝트 · 분야</th>
             <th scope="col">단계</th>
             <th scope="col">상태</th>
-            <th scope="col">신청자</th>
+            <th scope="col" title="서버 연동 준비 중">
+              신청자
+            </th>
             <th scope="col">신청일시</th>
-            <th scope="col">구분</th>
+            <th scope="col" title="서버 연동 준비 중">
+              구분
+            </th>
             <th scope="col">상세</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((application) => (
-            <tr key={application.id}>
-              <td title={`${application.project} · ${application.field}`}>
-                {application.project} · {application.field}
-              </td>
-              <td>
-                <TierText $tier={application.tier}>{application.tier}</TierText>
-              </td>
-              <td>
-                <StatusText $status={application.status}>
-                  {application.status}
-                </StatusText>
-              </td>
-              <td>{application.applicant}</td>
-              <td>{application.appliedAt}</td>
-              <td>{application.kind}</td>
-              <td>
-                <DetailLink href={`/apply/${application.id}`}>
-                  {canReview(application) ? "검토하기" : "상세"}
-                </DetailLink>
-              </td>
-            </tr>
-          ))}
+          {rows.map((application) => {
+            const title = `${application.projectName} · ${FIELD_LABELS[application.field]}`;
+            return (
+              <tr key={application.id}>
+                <td title={title}>{title}</td>
+                <td>
+                  <TierText $tier={application.tier}>{application.tier}</TierText>
+                </td>
+                <td>
+                  <StatusText $status={application.status}>
+                    {STATUS_LABELS[application.status]}
+                  </StatusText>
+                </td>
+                {/* 목록 응답에 신청자 이름과 첫 신청 · 분야 추가 구분이 없어 상세에서 확인 */}
+                <td>
+                  <PendingValue title="서버 연동 준비 중">—</PendingValue>
+                </td>
+                <td>{application.appliedAt}</td>
+                <td>
+                  <PendingValue title="서버 연동 준비 중">—</PendingValue>
+                </td>
+                <td>
+                  <DetailLink href={`/apply/${application.id}`}>
+                    {application.status === "PENDING" ? "검토하기" : "상세"}
+                  </DetailLink>
+                </td>
+              </tr>
+            );
+          })}
           {rows.length === 0 && (
             <tr>
-              <EmptyCell colSpan={7}>검색 결과가 없습니다.</EmptyCell>
+              <EmptyCell colSpan={7}>
+                {errorHere ? (
+                  <CellStatus role="alert">
+                    {errorHere}
+                    <RetryButton type="button" onClick={retry}>
+                      다시 시도
+                    </RetryButton>
+                  </CellStatus>
+                ) : current === null ? (
+                  "활용신청 목록을 불러오는 중입니다."
+                ) : statusFilter ? (
+                  "검색 결과가 없습니다."
+                ) : (
+                  "활용신청 내역이 없습니다."
+                )}
+              </EmptyCell>
             </tr>
           )}
         </tbody>
       </ApplicationTable>
 
       <Pager>
-        <Total role="status">전체 {filtered.length}건</Total>
+        <Total role="status">
+          {loaded ? `전체 ${loaded.data.totalCount}건` : ""}
+        </Total>
         <PageList aria-label="페이지">
           <PageButton
             type="button"
-            disabled={currentPage === 1}
+            disabled={currentPage === 0}
             onClick={() => setPage(currentPage - 1)}
           >
             이전
           </PageButton>
-          {Array.from({ length: pageCount }, (_, index) => index + 1).map(
-            (pageNumber) => (
+          {Array.from({ length: pageCount }, (_, index) => index).map(
+            (pageIndex) => (
               <PageButton
-                key={pageNumber}
+                key={pageIndex}
                 type="button"
-                aria-label={`${pageNumber}페이지`}
-                aria-current={pageNumber === currentPage ? "page" : undefined}
-                onClick={() => setPage(pageNumber)}
+                aria-label={`${pageIndex + 1}페이지`}
+                aria-current={pageIndex === currentPage ? "page" : undefined}
+                onClick={() => setPage(pageIndex)}
               >
-                {pageNumber}
+                {pageIndex + 1}
               </PageButton>
             ),
           )}
           <PageButton
             type="button"
-            disabled={currentPage === pageCount}
+            disabled={currentPage >= pageCount - 1}
             onClick={() => setPage(currentPage + 1)}
           >
             다음
