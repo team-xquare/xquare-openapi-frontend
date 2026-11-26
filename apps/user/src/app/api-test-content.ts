@@ -4,7 +4,7 @@ export type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
 
 export const HTTP_METHODS: HttpMethod[] = ["GET", "POST", "PATCH", "DELETE"];
 
-// 키 없이 호출할 수 있는 공개 API(급식)를 기본 요청으로 둠
+// 누구나 신청하면 바로 쓸 수 있는 공개 API(급식)를 기본 요청으로 둠
 export const DEFAULT_REQUEST: { method: HttpMethod; url: string } = {
   method: "GET",
   url: `${API_BASE_URL.replace(/\/+$/, "")}/meals`,
