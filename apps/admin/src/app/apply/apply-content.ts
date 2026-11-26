@@ -1,7 +1,7 @@
 import { ApiError } from "@xquare/api";
 import { api } from "@/lib/api";
 
-export type AccessTier = "제한" | "교내";
+export type AccessTier = "공개" | "중간" | "제한";
 
 // 서버 시각 문자열을 서울 시각 "2026-11-24 19:39"로 바꿈.
 // 오프셋(Z, +09:00 등)이 있으면 서울 시각으로 환산하고, 없으면 이미 서울 시각으로 봄
@@ -34,8 +34,10 @@ export type ApplicationField =
   | "TEACHER"
   | "CLUB"
   | "SCHEDULE"
-  | "STUDY_SUPERVISOR";
-export type ApplicationLevel = "SCHOOL" | "RESTRICTED";
+  | "STUDY_SUPERVISOR"
+  | "MEAL";
+// 서버가 공개(PUBLIC) 단계를 추가할 예정. SCHOOL은 화면에서 "중간"으로 부름
+export type ApplicationLevel = "PUBLIC" | "SCHOOL" | "RESTRICTED";
 export type ApplicationStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 interface ApplicationSummaryResponse {
@@ -81,17 +83,23 @@ export const FIELD_LABELS: Record<ApplicationField, string> = {
   CLUB: "동아리",
   SCHEDULE: "일정",
   STUDY_SUPERVISOR: "자습 감독",
+  MEAL: "급식",
 };
+
+// 서버가 아직 모르는 분야를 내려주면 값을 그대로 보여 줌
+export const fieldLabel = (field: ApplicationField) =>
+  (FIELD_LABELS as Partial<Record<string, string>>)[field] ?? field;
 
 export const STATUS_LABELS: Record<ApplicationStatus, string> = {
   PENDING: "승인 대기",
-  APPROVED: "승인",
+  APPROVED: "승인 완료",
   REJECTED: "반려",
 };
 
-// 단계는 서버가 분야로 정해 내려줌: 개인정보가 들어간 분야는 제한, 나머지는 교내
+// 단계는 서버가 분야로 정해 내려줌: 개인정보가 들어간 분야는 제한, 나머지는 중간
+// (공개는 서버가 추가하기 전까지 내려오지 않음)
 const tierOf = (level: ApplicationLevel): AccessTier =>
-  level === "RESTRICTED" ? "제한" : "교내";
+  level === "RESTRICTED" ? "제한" : level === "PUBLIC" ? "공개" : "중간";
 
 export const APPLICATION_PAGE_SIZE = 10;
 

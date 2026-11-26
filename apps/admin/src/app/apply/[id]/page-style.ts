@@ -1,6 +1,7 @@
 import styled from "@emotion/styled";
 import Link from "next/link";
 import { Xquare_colors } from "../../../styles/colors";
+import type { AccessTier } from "../apply-content";
 
 const BORDER = `1px solid ${Xquare_colors.slate[200]}`;
 const STRONG_BORDER = `1px solid ${Xquare_colors.slate[400]}`;
@@ -170,7 +171,7 @@ export const ActionMessage = styled.p<{ $isError: boolean }>`
   text-align: right;
 `;
 
-export const TierValue = styled.span<{ $tier: "제한" | "교내" }>`
+export const TierValue = styled.span<{ $tier: AccessTier }>`
   color: ${({ $tier }) =>
     $tier === "제한" ? Xquare_colors.orange[600] : Xquare_colors.slate[900]};
 `;

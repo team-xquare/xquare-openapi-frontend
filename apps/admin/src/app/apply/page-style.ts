@@ -1,6 +1,7 @@
 import styled from "@emotion/styled";
 import Link from "next/link";
 import { Xquare_colors } from "../../styles/colors";
+import type { AccessTier } from "./apply-content";
 
 const BORDER = `1px solid ${Xquare_colors.slate[200]}`;
 const STRONG_BORDER = `1px solid ${Xquare_colors.slate[400]}`;
@@ -185,8 +186,8 @@ export const ApplicationTable = styled.table`
   }
 `;
 
-// 단계: 제한은 주황, 교내는 회색
-export const TierText = styled.span<{ $tier: "제한" | "교내" }>`
+// 단계: 제한은 주황, 공개 · 중간은 회색
+export const TierText = styled.span<{ $tier: AccessTier }>`
   color: ${({ $tier }) =>
     $tier === "제한"
       ? Xquare_colors.orange[600]

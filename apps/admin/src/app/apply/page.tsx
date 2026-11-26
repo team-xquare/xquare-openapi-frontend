@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { errorMessage, isAbortError } from "../notice-content";
 import {
-  FIELD_LABELS,
+  fieldLabel,
   STATUS_LABELS,
   fetchApplications,
   type ApplicationPage,
@@ -196,7 +196,7 @@ export default function ApplyListPage() {
         </thead>
         <tbody>
           {rows.map((application) => {
-            const title = `${application.projectName} · ${FIELD_LABELS[application.field]}`;
+            const title = `${application.projectName} · ${fieldLabel(application.field)}`;
             return (
               <tr key={application.id}>
                 <td title={title}>{title}</td>

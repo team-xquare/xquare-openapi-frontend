@@ -9,7 +9,7 @@ import {
   isNotFoundError,
 } from "../../notice-content";
 import {
-  FIELD_LABELS,
+  fieldLabel,
   REJECT_REASON_MAX_LENGTH,
   STATUS_LABELS,
   approveApplication,
@@ -181,7 +181,7 @@ export function ApplicationDetailContent({ id }: { id: string }) {
       <PageHead>
         <PageTitle>활용신청 상세</PageTitle>
         <PageDescription>
-          {shown.projectName} · {FIELD_LABELS[shown.field]}
+          {shown.projectName} · {fieldLabel(shown.field)}
         </PageDescription>
       </PageHead>
 
@@ -206,7 +206,7 @@ export function ApplicationDetailContent({ id }: { id: string }) {
         </DetailRow>
         <DetailRow>
           <dt>분야</dt>
-          <dd>{FIELD_LABELS[shown.field]}</dd>
+          <dd>{fieldLabel(shown.field)}</dd>
         </DetailRow>
         <DetailRow>
           <dt>접근 단계</dt>
@@ -214,7 +214,7 @@ export function ApplicationDetailContent({ id }: { id: string }) {
             <TierValue $tier={tier}>
               {tier === "제한"
                 ? "제한 — 개인정보가 들어간 데이터라 관리자 승인이 있어야 호출할 수 있습니다"
-                : "교내 — 신청하면 자동 승인"}
+                : "중간 — 신청하면 자동 승인"}
             </TierValue>
           </dd>
         </DetailRow>
@@ -248,7 +248,7 @@ export function ApplicationDetailContent({ id }: { id: string }) {
               ? shown.projectFields
                   .map(
                     (item) =>
-                      `${FIELD_LABELS[item.field]} (${STATUS_LABELS[item.status]})`,
+                      `${fieldLabel(item.field)} (${STATUS_LABELS[item.status]})`,
                   )
                   .join(" · ")
               : "—"}
