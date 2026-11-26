@@ -27,10 +27,10 @@ export const ERROR_PAGES: Record<ErrorStatus, ErrorPageContent> = {
   403: {
     title: "접근 권한이 없습니다",
     description:
-      "이 페이지를 볼 수 있는 권한이 없습니다. 계정을 확인하거나 관리자에게 문의해 주세요.",
+      "이 프로젝트에서 이 API가 속한 분야를 아직 활용신청하지 않았거나, 신청이 승인되지 않았습니다(승인 대기 · 반려). 교내 분야는 신청하면 바로, 제한 분야는 관리자 승인 후 이 프로젝트의 키로 호출할 수 있습니다.",
     actions: [
-      { label: "홈으로", href: "/" },
-      { label: "이전 페이지", kind: "back" },
+      { label: "내 신청 상태 보기", href: "/mypage" },
+      { label: "문서 홈으로", href: "/" },
     ],
   },
   404: {

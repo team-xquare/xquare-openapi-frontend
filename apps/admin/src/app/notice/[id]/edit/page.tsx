@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import { notFound } from "next/navigation";
-import { NOTICES } from "../../../notice-content";
-import { NoticeForm } from "../../notice-form";
+import { NoticeEditForm } from "../../notice-form";
 
+// 공지는 브라우저에서 불러와서 빌드할 때 아는 id가 없음. Cache Components는 id가 하나 이상
+// 있어야 빌드되므로 없는 id(0, 서버 id는 1부터)로 공통 화면 틀만 미리 그림
 export function generateStaticParams() {
-  return NOTICES.map((notice) => ({ id: notice.id }));
+  return [{ id: "0" }];
 }
 
 export default function NoticeEditPage({
@@ -14,20 +14,17 @@ export default function NoticeEditPage({
 }) {
   return (
     <Suspense>
-      <NoticeEditForm params={params} />
+      <NoticeEditLoader params={params} />
     </Suspense>
   );
 }
 
-async function NoticeEditForm({
+// 공지는 로그인한 관리자 토큰으로 브라우저에서 불러오므로 서버에서는 id만 넘김
+async function NoticeEditLoader({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const notice = NOTICES.find((item) => item.id === id);
-
-  if (!notice) notFound();
-
-  return <NoticeForm notice={notice} />;
+  return <NoticeEditForm id={id} />;
 }

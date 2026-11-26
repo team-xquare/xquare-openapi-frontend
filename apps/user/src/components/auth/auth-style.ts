@@ -97,6 +97,22 @@ export const AuthInputs = styled.div<{ isFading?: boolean }>`
   }
 `;
 
+// 비밀번호 변경 완료처럼 폼 위에 보여 줄 안내. 연한 초록 바탕에 진한 글자로 대비를 확보함
+export const AuthNotice = styled.p`
+  background: ${Xquare_colors.green[100]};
+  border-radius: 8px;
+  box-sizing: border-box;
+  color: ${Xquare_colors.gray[700]};
+  font-family: ${AUTH_FONT_FAMILY};
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 100%;
+  padding: 0.7rem 0.9rem;
+  /* 입력칸(Input_text)과 같은 폭 */
+  width: 300px;
+`;
+
 export const AuthFormActions = styled.div`
   align-items: center;
   display: flex;
@@ -133,6 +149,12 @@ export const AuthLinkButton = styled.button`
   font-size: 12px;
   line-height: normal;
   padding: 0;
+
+  /* 요청을 보내는 동안 누를 수 없게 함 */
+  &:disabled {
+    color: ${Xquare_colors.gray[500]};
+    cursor: default;
+  }
 `;
 
 // 비밀번호 입력칸 오른쪽 아래의 비밀번호 찾기 링크

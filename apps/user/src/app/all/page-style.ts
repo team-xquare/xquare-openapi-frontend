@@ -1,5 +1,6 @@
 import styled from "@emotion/styled";
 import Link from "next/link";
+import type { EndpointAccess } from "../all-content";
 
 export const EndpointPage = styled.main`
   margin: 0 auto;
@@ -69,6 +70,33 @@ export const EndpointGroupSection = styled.section`
     flex-direction: column;
     gap: 8px;
   }
+`;
+
+export const EndpointGroupHeader = styled.header`
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+`;
+
+const ACCESS_BADGE_COLORS: Record<
+  EndpointAccess,
+  { background: string; color: string }
+> = {
+  public: { background: "#ecf1ff", color: "#2e54cc" },
+  school: { background: "#e7f6ec", color: "#17803d" },
+  restricted: { background: "#fff1e0", color: "#b86105" },
+};
+
+export const AccessBadge = styled.span<{ access: EndpointAccess }>`
+  background: ${(props) => ACCESS_BADGE_COLORS[props.access].background};
+  border-radius: 999px;
+  color: ${(props) => ACCESS_BADGE_COLORS[props.access].color};
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 15px;
+  padding: 4px 10px;
+  white-space: nowrap;
 `;
 
 export const EndpointCard = styled.article`
