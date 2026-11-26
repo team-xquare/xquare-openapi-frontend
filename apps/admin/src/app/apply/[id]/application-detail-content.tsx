@@ -39,6 +39,18 @@ import {
   TierValue,
 } from "./page-style";
 
+const ACCESS_TEXT = {
+  공개: "공개 — 이메일 인증·승인 없이 신청하면 바로 사용",
+  중간: "중간 — 신청하면 자동 승인",
+  제한: "제한 — 개인정보가 들어간 데이터라 관리자 승인이 있어야 호출할 수 있습니다",
+} as const;
+
+// 공개 · 중간은 신청하면 바로 승인되므로 처리 시각 대신 이 문구를 보여 줌
+const AUTO_APPROVED_TEXT = {
+  공개: " (공개 · 바로 승인)",
+  중간: " (중간 · 자동 승인)",
+} as const;
+
 export function ApplicationDetailContent({ id }: { id: string }) {
   const router = useRouter();
   const [application, setApplication] = useState<ApplicationDetail | null>(
@@ -126,7 +138,8 @@ export function ApplicationDetailContent({ id }: { id: string }) {
   }
 
   const { applicant, tier } = shown;
-  const isPending = shown.status === "PENDING";
+  // 승인 · 반려는 제한 단계의 대기 신청만. 공개 · 중간은 자동 승인됨
+  const isPending = tier === "제한" && shown.status === "PENDING";
   const messageHere = actionMessage?.id === id ? actionMessage : null;
 
   const decide = async (action: "approve" | "reject") => {
@@ -181,7 +194,7 @@ export function ApplicationDetailContent({ id }: { id: string }) {
       <PageHead>
         <PageTitle>활용신청 상세</PageTitle>
         <PageDescription>
-          {shown.projectName} · {fieldLabel(shown.field)}
+          {shown.projectName} · {fieldLabel(shown.field)} 분야 · {tier} API
         </PageDescription>
       </PageHead>
 
@@ -212,9 +225,7 @@ export function ApplicationDetailContent({ id }: { id: string }) {
           <dt>접근 단계</dt>
           <dd>
             <TierValue $tier={tier}>
-              {tier === "제한"
-                ? "제한 — 개인정보가 들어간 데이터라 관리자 승인이 있어야 호출할 수 있습니다"
-                : "중간 — 신청하면 자동 승인"}
+              {ACCESS_TEXT[tier]}
             </TierValue>
           </dd>
         </DetailRow>
@@ -224,7 +235,9 @@ export function ApplicationDetailContent({ id }: { id: string }) {
             <StatusText $status={shown.status}>
               {STATUS_LABELS[shown.status]}
             </StatusText>
-            {shown.decidedAt && ` (${shown.decidedAt} 처리)`}
+            {shown.status === "APPROVED" && tier !== "제한"
+              ? AUTO_APPROVED_TEXT[tier]
+              : shown.decidedAt && ` (${shown.decidedAt} 처리)`}
           </dd>
         </DetailRow>
         {shown.status === "REJECTED" && (
@@ -234,7 +247,7 @@ export function ApplicationDetailContent({ id }: { id: string }) {
           </DetailRow>
         )}
         <DetailRow>
-          <dt>사용 목적</dt>
+          <dt>{tier === "제한" ? "사용 목적" : "사용 내용"}</dt>
           <dd>{shown.purpose}</dd>
         </DetailRow>
         <DetailRow>
@@ -259,7 +272,7 @@ export function ApplicationDetailContent({ id }: { id: string }) {
           <dd>
             {shown.keyIssued
               ? "발급됨"
-              : "아직 발급 전 (프로젝트의 첫 승인 때 발급)"}
+              : "아직 발급 전 (프로젝트에서 처음 분야를 신청할 때 발급)"}
           </dd>
         </DetailRow>
         {isPending && (
