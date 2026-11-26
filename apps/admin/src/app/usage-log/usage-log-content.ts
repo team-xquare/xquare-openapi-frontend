@@ -128,6 +128,17 @@ export function saveUsageLogs(logs: UsageLog[]) {
   }
 }
 
+// 목록에서 저장해 둔 행을 id로 찾음. 상세 API(GET /admin/api-usage-logs/{id})가 생기면 이 함수만 바꿈
+export function getUsageLog(id: string): UsageLog | null {
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    const logs: Record<string, UsageLog> = saved ? JSON.parse(saved) : {};
+    return logs[id] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // 최근 N일을 지금 기준 from ~ to로 만듦. 검색할 때마다 새로 만들어 새 기록도 포함되게 함
 export function createUsageLogRange(period: string) {
   const to = new Date();
