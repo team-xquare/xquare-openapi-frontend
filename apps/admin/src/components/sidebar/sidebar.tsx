@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { logout, useMyInfo } from "../../lib/my-info";
 import {
   SidebarContainer,
   SidebarInner,
@@ -16,6 +17,7 @@ const PRIMARY_ITEMS = [
   { label: "홈", href: "/" },
   { label: "공지", href: "/notice" },
   { label: "활용신청", href: "/apply" },
+  { label: "사용 기록", href: "/usage-log" },
 ];
 
 const DATA_ITEMS = [
@@ -29,6 +31,8 @@ const DATA_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const myInfo = useMyInfo();
   const renderItem = ({ label, href }: (typeof PRIMARY_ITEMS)[number]) => {
     const isActive =
       pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
@@ -58,12 +62,13 @@ export function Sidebar() {
           {DATA_ITEMS.map(renderItem)}
         </SidebarNav>
         <SidebarFooter>
-          {/* 로그인 연동 전 시안의 사용자명을 표시합니다. */}
-          <span>홍길동</span>
+          <span>{myInfo?.name}</span>
           <LogoutButton
             type="button"
-            disabled
-            title="로그인 연동 후 사용할 수 있습니다."
+            onClick={() => {
+              logout();
+              router.replace("/login");
+            }}
           >
             로그아웃
           </LogoutButton>

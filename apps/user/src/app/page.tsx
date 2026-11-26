@@ -109,7 +109,7 @@ export default function Home() {
       <DocSection
         id="access"
         title="접근 권한"
-        description="API 키로는 활용 신청해 승인된 API만 호출할 수 있습니다. 계정 유형에 따라 호출 한도가 다릅니다."
+        description="엔드포인트마다 호출 가능한 대상이 정해져 있습니다. 명세서의 타겟 값을 따릅니다."
       >
         <InfoList items={ACCESS_LEVELS} />
       </DocSection>

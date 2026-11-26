@@ -1,7 +1,13 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import {
+  Suspense,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ApiError } from "@xquare/api";
 import { api } from "@/lib/api";
 import { Button_square } from "../../components/button";
@@ -15,11 +21,26 @@ import {
   AuthLink,
   AuthLinkRow,
   AuthLiveMessage,
+  AuthNotice,
   AuthTitle,
   PasswordHelpLink,
 } from "../../components/auth";
 
 const ERROR_COLOR = String(Xquare_colors.red[500]);
+
+// 비밀번호를 바꾼 뒤 /login?reset=done 으로 들어오면 안내를 보여줌
+// useSearchParams는 Suspense 안에서만 써야 해서 따로 뺌
+// 눈으로 보이게 폼 위에 두고, 내용을 가진 채로 새로 생기는 영역이라 화면 읽기 프로그램이
+// 확실히 읽도록 role="alert"를 씀 (role="status"는 처음부터 내용이 있으면 읽지 않는 경우가 많음)
+function ResetDoneNotice() {
+  const searchParams = useSearchParams();
+  if (searchParams.get("reset") !== "done") return null;
+  return (
+    <AuthNotice role="alert">
+      비밀번호를 변경했습니다. 새 비밀번호로 로그인해주세요.
+    </AuthNotice>
+  );
+}
 
 // XQUARE 인프라 서비스 로그인 화면과 같은 구성
 export function LoginForm() {
@@ -78,6 +99,9 @@ export function LoginForm() {
     <AuthLayout label="로그인 영역">
       <AuthFormCard onSubmit={handleSubmit} aria-label="로그인 폼">
         <AuthTitle>XQUARE LOGIN</AuthTitle>
+        <Suspense fallback={null}>
+          <ResetDoneNotice />
+        </Suspense>
 
         <AuthInputs>
           <Input_text

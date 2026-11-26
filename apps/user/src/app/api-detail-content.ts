@@ -14,6 +14,8 @@ export interface ApiDetail {
   badges: string[];
   basicInfo: InfoListItem[];
   detailInfo: InfoListItem[];
+  // 분야마다 다른 이용 조건 (접근 단계 · 승인 방식 · 활용신청 단위)
+  accessInfo: InfoListItem[];
   parameters: InfoListItem[];
   responses: ApiResponseExample[];
   test: {
@@ -26,15 +28,9 @@ export interface ApiDetail {
   };
 }
 
-// 모든 API에 같은 이용 조건
+// 모든 API에 같은 이용 조건 (분야별 조건은 ApiDetail.accessInfo)
 export const API_LICENSE_INFO: InfoListItem[] = [
   { label: "이용허락범위", value: "이용허락범위 제한 없음" },
-  { label: "심의유형", value: "개발단계 : 자동승인 / 운영단계 : 자동승인" },
-  {
-    label: "신청 가능 트래픽",
-    value:
-      "개발계정 : 10,000 / 운영계정 : 활용사례 등록시 신청하면 트래픽 증가 가능",
-  },
 ];
 
 export const API_DETAILS: ApiDetail[] = [
@@ -58,6 +54,23 @@ export const API_DETAILS: ApiDetail[] = [
       { label: "데이터 포맷", value: "JSON", isHalf: true },
       { label: "제약조건", value: "소속 동아리 없으면 club은 null", isHalf: true },
       { label: "기준일", value: "2026-09-12", isHalf: true },
+    ],
+    accessInfo: [
+      {
+        label: "접근 단계",
+        value:
+          "제한 API — 개인정보가 들어간 데이터라 관리자 승인이 있어야 호출할 수 있습니다.",
+      },
+      {
+        label: "승인 방식",
+        value:
+          "관리자 승인 (제한 API · 이메일 인증 후 관리자가 사용 목적을 보고 승인)",
+      },
+      {
+        label: "활용신청 단위",
+        value:
+          "학생 분야 (제한) — 프로젝트에서 학생 분야를 신청해 승인되면 이 API를 그 프로젝트의 API 키로 호출할 수 있습니다.",
+      },
     ],
     parameters: [
       {
@@ -91,6 +104,17 @@ export const API_DETAILS: ApiDetail[] = [
           "{",
           '  "code": "INVALID_API_KEY",',
           '  "message": "API 키가 유효하지 않습니다."',
+          "}",
+        ],
+      },
+      {
+        code: "403",
+        description:
+          "FORBIDDEN — 이 프로젝트에서 학생 분야를 활용신청하지 않았거나 아직 승인되지 않았습니다.",
+        example: [
+          "{",
+          '  "code": "FORBIDDEN",',
+          '  "message": "활용신청하지 않았거나 승인되지 않은 분야의 API입니다."',
           "}",
         ],
       },

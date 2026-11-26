@@ -278,7 +278,7 @@ export default function TeacherListPage() {
                   <Unassigned>없음</Unassigned>
                 )}
               </td>
-              <td>{teacher.manager && <LeaderBadge>부장</LeaderBadge>}</td>
+              <td>{teacher.isManager && <LeaderBadge>부장</LeaderBadge>}</td>
               <td>
                 <RowActions>
                   <EditLink href={`/teacher/${teacher.id}/edit`}>수정</EditLink>

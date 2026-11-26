@@ -143,7 +143,7 @@ export function ApiDetailView({ detail }: { detail: ApiDetail }) {
         </DetailSection>
 
         <DetailSection title="이용 조건 및 라이선스 정보">
-          <DetailList items={API_LICENSE_INFO} />
+          <DetailList items={[...API_LICENSE_INFO, ...detail.accessInfo]} />
         </DetailSection>
 
         <DetailSection title="Parameters">

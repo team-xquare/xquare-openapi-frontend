@@ -96,6 +96,7 @@ export const LogoutButton = styled.button`
   background: transparent;
   border: 0;
   color: ${Xquare_colors.purple[400]};
+  cursor: pointer;
   font-size: 13px;
   font-weight: 400;
   line-height: 1.4;
