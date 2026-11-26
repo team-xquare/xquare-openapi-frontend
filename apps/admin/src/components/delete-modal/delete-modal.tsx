@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 import styled from "@emotion/styled";
 import { Xquare_colors } from "../../styles/colors";
+import { ModalError } from "../request-status/request-status-style";
 
 export type DeleteModalRelation = {
   title: string;
@@ -13,6 +14,10 @@ type DeleteModalProps = {
   title: string;
   description?: string;
   relations: DeleteModalRelation[];
+  // 삭제 요청 중. 버튼을 막고 Esc · 바깥 클릭으로 닫지 않음
+  pending?: boolean;
+  // 삭제 실패 문구
+  error?: string;
   onCancel: () => void;
   onConfirm: () => void;
 };
@@ -21,10 +26,16 @@ export function DeleteModal({
   title,
   description = "삭제하면 되돌릴 수 없습니다. 아래 연결이 함께 정리됩니다.",
   relations,
+  pending = false,
+  error,
   onCancel,
   onConfirm,
 }: DeleteModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  // 부모가 렌더마다 새 함수를 넘겨도 effect가 다시 돌아 포커스가 튀지 않게 함
+  const cancel = useEffectEvent(() => {
+    if (!pending) onCancel();
+  });
 
   useEffect(() => {
     const previousFocus = document.activeElement as HTMLElement | null;
@@ -34,14 +45,14 @@ export function DeleteModal({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onCancel();
+        cancel();
         return;
       }
 
       if (event.key !== "Tab" || !panel) return;
       const focusable = Array.from(
         panel.querySelectorAll<HTMLElement>(
-          'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+          'button:not(:disabled), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
         ),
       );
       if (focusable.length === 0) return;
@@ -62,7 +73,12 @@ export function DeleteModal({
       document.removeEventListener("keydown", handleKeyDown);
       previousFocus?.focus();
     };
-  }, [onCancel]);
+  }, []);
+
+  // 누른 삭제 버튼이 막히면 포커스가 사라지므로 창으로 옮김
+  useEffect(() => {
+    if (pending) panelRef.current?.focus();
+  }, [pending]);
 
   return (
     <Overlay>
@@ -70,8 +86,9 @@ export function DeleteModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-modal-title"
+        aria-busy={pending || undefined}
         onClick={(event) => {
-          if (event.target === event.currentTarget) onCancel();
+          if (event.target === event.currentTarget && !pending) onCancel();
         }}
       >
         <Panel ref={panelRef} tabIndex={-1}>
@@ -85,9 +102,14 @@ export function DeleteModal({
               </Relation>
             ))}
           </Relations>
+          {error && <ModalError role="alert">{error}</ModalError>}
           <Actions>
-            <CancelButton type="button" onClick={onCancel}>취소</CancelButton>
-            <ConfirmButton type="button" onClick={onConfirm}>삭제</ConfirmButton>
+            <CancelButton type="button" disabled={pending} onClick={onCancel}>
+              취소
+            </CancelButton>
+            <ConfirmButton type="button" disabled={pending} onClick={onConfirm}>
+              {pending ? "삭제 중…" : "삭제"}
+            </ConfirmButton>
           </Actions>
         </Panel>
       </Dialog>
@@ -166,6 +188,11 @@ const CancelButton = styled.button`
   font-size: 14px;
   height: 40px;
   padding: 0 20px;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
 `;
 
 const ConfirmButton = styled.button`
@@ -178,4 +205,9 @@ const ConfirmButton = styled.button`
   font-size: 14px;
   height: 40px;
   padding: 0 20px;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
 `;

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import {
-  getStudentDeleteRelations,
-  STUDENTS,
-  type Student,
-} from "./student-content";
-import { DeleteModal } from "@/components/delete-modal";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { errorMessage, isAbortError } from "@/lib/api-error";
+import type { PageResponse } from "@/lib/api-types";
+import { fetchStudents, type StudentResponse } from "@/lib/students-api";
+import { CellStatus } from "@/components/request-status/request-status-style";
+import { DeleteStudentModal } from "./delete-student-modal";
 import {
   Actions,
   DeleteButton,
@@ -23,6 +24,7 @@ import {
   PageTitle,
   Pager,
   PrimaryLink,
+  RetryButton,
   SearchButton,
   SearchInput,
   StudentPage,
@@ -31,8 +33,16 @@ import {
 } from "./page-style";
 
 const PAGE_SIZE = 5;
+// 학생이 수백 명이라 페이지 번호는 10개씩 끊어 보여 줌
+const PAGE_GROUP_SIZE = 10;
+
 export default function StudentListPage() {
-  const [students, setStudents] = useState(STUDENTS);
+  const router = useRouter();
+  // 지금 페이지의 학생 목록. 처음 불러오기 전에는 null
+  const [list, setList] = useState<PageResponse<StudentResponse> | null>(null);
+  const [loadError, setLoadError] = useState("");
+  // 바뀌면 목록을 다시 불러옴 (다시 시도 · 검색 · 삭제 후)
+  const [reloadKey, setReloadKey] = useState(0);
   const [keyword, setKeyword] = useState("");
   const [grade, setGrade] = useState("all");
   const [classNumber, setClassNumber] = useState("all");
@@ -42,32 +52,70 @@ export default function StudentListPage() {
     classNumber: "all",
   });
   const [page, setPage] = useState(1);
-  const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
-
-  const filtered = students.filter(
-    (student) =>
-      (!query.keyword || student.name.includes(query.keyword)) &&
-      (query.grade === "all" || String(student.grade) === query.grade) &&
-      (query.classNumber === "all" ||
-        String(student.classNumber) === query.classNumber),
+  const [deleteTarget, setDeleteTarget] = useState<StudentResponse | null>(
+    null,
   );
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // 학생이 많아 검색 · 페이지 나누기는 서버에 맡김.
+  // 다른 화면에서 돌아와 다시 보일 때도 effect가 다시 돌아 최신 목록을 받음
+  useEffect(() => {
+    // 로그인 여부는 저장소를 읽어야 해서 렌더 중이 아니라 effect에서 확인
+    if (!api.auth.isLoggedIn()) {
+      router.replace("/login");
+      return;
+    }
+    const request = new AbortController();
+    fetchStudents(
+      {
+        name: query.keyword,
+        grade: query.grade === "all" ? undefined : Number(query.grade),
+        classNum:
+          query.classNumber === "all" ? undefined : Number(query.classNumber),
+        page: page - 1,
+        size: PAGE_SIZE,
+      },
+      request.signal,
+    )
+      .then((response) => {
+        // 삭제로 마지막 페이지가 비면 그 앞 페이지를 다시 받음
+        if (response.content.length === 0 && page > 1) {
+          setPage(Math.max(1, Math.min(page - 1, response.totalPage)));
+          return;
+        }
+        setList(response);
+        setLoadError("");
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error) || request.signal.aborted) return;
+        setLoadError(errorMessage(error, "학생 목록을 불러오지 못했습니다."));
+      });
+    return () => request.abort();
+  }, [router, reloadKey, query, page]);
+
+  // 다른 페이지로 이동해도 화면이 숨겨진 채 상태가 남으므로,
+  // 돌아왔을 때 전에 연 삭제 모달이 그대로 뜨지 않도록 숨겨질 때 닫음 (삭제 요청은 모달이 취소함)
+  useLayoutEffect(() => {
+    return () => setDeleteTarget(null);
+  }, []);
+
+  // 불러오지 못했으면 지난 목록 대신 실패 문구를 보여 줌
+  const rows = loadError ? [] : (list?.content ?? []);
+  const pageCount = Math.max(1, list?.totalPage ?? 1);
   const currentPage = Math.min(page, pageCount);
-  const rows = filtered.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
+  const groupStart =
+    Math.floor((currentPage - 1) / PAGE_GROUP_SIZE) * PAGE_GROUP_SIZE + 1;
+  const pageNumbers = Array.from(
+    { length: Math.min(PAGE_GROUP_SIZE, pageCount - groupStart + 1) },
+    (_, index) => groupStart + index,
   );
+  const isFiltered =
+    query.keyword !== "" ||
+    query.grade !== "all" ||
+    query.classNumber !== "all";
 
-  const removeStudent = (student: Student) => {
+  const removeStudent = (student: StudentResponse) => {
     setDeleteTarget(student);
-  };
-
-  const confirmDelete = () => {
-    if (!deleteTarget) return;
-    setStudents((current) =>
-      current.filter((item) => item.id !== deleteTarget.id),
-    );
-    setDeleteTarget(null);
   };
 
   return (
@@ -86,9 +134,12 @@ export default function StudentListPage() {
           event.preventDefault();
           setQuery({ keyword: keyword.trim(), grade, classNumber });
           setPage(1);
+          // 같은 조건으로 다시 검색해도 새로 받음
+          setReloadKey((key) => key + 1);
         }}
       >
         <SearchInput
+          ref={searchInputRef}
           type="search"
           value={keyword}
           placeholder="이름으로 검색"
@@ -128,7 +179,6 @@ export default function StudentListPage() {
         <thead>
           <tr>
             <th>학년/반/번호</th>
-            <th>학과</th>
             <th>이름</th>
             <th>학교 이메일</th>
             <th>소속 동아리</th>
@@ -139,12 +189,11 @@ export default function StudentListPage() {
           {rows.map((student) => (
             <tr key={student.id}>
               <td>
-                {student.grade}학년 {student.classNumber}반 {student.number}번
+                {student.grade}학년 {student.classNum}반 {student.number}번
               </td>
-              <td>{student.department}</td>
               <td>{student.name}</td>
               <td>{student.email}</td>
-              <td>{student.club}</td>
+              <td>{student.club?.name ?? "없음"}</td>
               <td>
                 <Actions>
                   <EditLink href={`/student/${student.id}/edit`}>수정</EditLink>
@@ -160,14 +209,35 @@ export default function StudentListPage() {
           ))}
           {rows.length === 0 && (
             <tr>
-              <EmptyCell colSpan={6}>검색 결과가 없습니다.</EmptyCell>
+              <EmptyCell colSpan={5}>
+                {loadError ? (
+                  <CellStatus role="alert">
+                    {loadError}
+                    <RetryButton
+                      type="button"
+                      onClick={() => {
+                        setLoadError("");
+                        setReloadKey((key) => key + 1);
+                      }}
+                    >
+                      다시 시도
+                    </RetryButton>
+                  </CellStatus>
+                ) : list === null ? (
+                  "학생 목록을 불러오는 중입니다."
+                ) : isFiltered ? (
+                  "검색 결과가 없습니다."
+                ) : (
+                  "등록된 학생이 없습니다."
+                )}
+              </EmptyCell>
             </tr>
           )}
         </tbody>
       </StudentTable>
 
       <Pager>
-        <Total role="status">전체 {filtered.length}명</Total>
+        <Total role="status">전체 {list?.totalCount ?? 0}명</Total>
         <PageList aria-label="페이지">
           <PageButton
             type="button"
@@ -176,18 +246,16 @@ export default function StudentListPage() {
           >
             이전
           </PageButton>
-          {Array.from({ length: pageCount }, (_, index) => index + 1).map(
-            (pageNumber) => (
-              <PageButton
-                key={pageNumber}
-                type="button"
-                aria-current={pageNumber === currentPage ? "page" : undefined}
-                onClick={() => setPage(pageNumber)}
-              >
-                {pageNumber}
-              </PageButton>
-            ),
-          )}
+          {pageNumbers.map((pageNumber) => (
+            <PageButton
+              key={pageNumber}
+              type="button"
+              aria-current={pageNumber === currentPage ? "page" : undefined}
+              onClick={() => setPage(pageNumber)}
+            >
+              {pageNumber}
+            </PageButton>
+          ))}
           <PageButton
             type="button"
             disabled={currentPage === pageCount}
@@ -199,11 +267,25 @@ export default function StudentListPage() {
       </Pager>
 
       {deleteTarget && (
-        <DeleteModal
-          title={`${deleteTarget.name} 학생을 삭제할까요?`}
-          relations={getStudentDeleteRelations(deleteTarget)}
-          onCancel={() => setDeleteTarget(null)}
-          onConfirm={confirmDelete}
+        <DeleteStudentModal
+          student={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={() => {
+            // 지운 행은 바로 빼고, 다음 페이지 학생으로 빈 자리를 채우도록 목록을 다시 받음
+            setList(
+              (prev) =>
+                prev && {
+                  ...prev,
+                  content: prev.content.filter(
+                    (student) => student.id !== deleteTarget.id,
+                  ),
+                  totalCount: Math.max(0, prev.totalCount - 1),
+                },
+            );
+            setReloadKey((key) => key + 1);
+            // 지운 행의 삭제 버튼이 사라져 포커스가 갈 곳이 없으므로 검색창으로 옮김
+            searchInputRef.current?.focus();
+          }}
         />
       )}
     </StudentPage>

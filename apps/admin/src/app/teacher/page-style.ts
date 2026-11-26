@@ -103,6 +103,9 @@ export const SearchButton = styled.button`
   color: ${Xquare_colors.slate[900]};
 `;
 
+// 목록을 불러오지 못했을 때 표 칸 안의 다시 시도 버튼. 검색 버튼과 같은 모양
+export const RetryButton = styled(SearchButton)``;
+
 export const Notice = styled.p`
   color: ${Xquare_colors.slate[600]};
   font-size: 14px;

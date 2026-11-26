@@ -28,6 +28,13 @@ const ACTION_BUTTON = `
   height: 40px;
   justify-content: center;
   padding: 0 20px;
+
+  /* 저장 · 삭제 요청 중 */
+  &:disabled,
+  &[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
 `;
 
 export const RegisterPage = styled.main`
@@ -191,7 +198,7 @@ export const DeleteButton = styled.button`
   color: ${Xquare_colors.red[600]};
   cursor: pointer;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: ${Xquare_colors.red[500]}12;
   }
 `;
@@ -209,7 +216,7 @@ export const SaveButton = styled.button`
   color: ${Xquare_colors.white};
   cursor: pointer;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: ${Xquare_colors.purple[700]};
   }
 
@@ -217,4 +224,20 @@ export const SaveButton = styled.button`
     outline: 2px solid ${Xquare_colors.purple[400]};
     outline-offset: 2px;
   }
+`;
+
+// 수정할 학생을 불러오지 못했을 때의 다시 시도 버튼
+export const RetryButton = styled.button`
+  ${ACTION_BUTTON}
+  background: ${Xquare_colors.white};
+  border: ${STRONG_BORDER};
+  color: ${Xquare_colors.slate[900]};
+  cursor: pointer;
+`;
+
+// 수정할 학생을 불러오지 못했을 때 목록으로 가는 링크
+export const ListLink = styled(Link)`
+  ${ACTION_BUTTON}
+  background: ${Xquare_colors.purple[400]};
+  color: ${Xquare_colors.white};
 `;

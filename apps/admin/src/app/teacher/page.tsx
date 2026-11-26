@@ -1,8 +1,30 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { TEACHERS } from "./teacher-content";
-import { DeleteModal } from "@/components/delete-modal";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
+import { useRouter } from "next/navigation";
+import { CellStatus } from "@/components/request-status/request-status-style";
+import { api } from "@/lib/api";
+import { errorMessage, isAbortError } from "@/lib/api-error";
+import type { PageResponse } from "@/lib/api-types";
+import {
+  fetchTeachers,
+  type TeacherResponse,
+  type TeacherSubject,
+} from "@/lib/teachers-api";
+import { DeleteTeacherModal } from "./delete-teacher-modal";
+import {
+  TEACHER_CLASS_NUMBERS,
+  TEACHER_GRADES,
+  TEACHER_POSITION_LABELS,
+  TEACHER_SUBJECT_LABELS,
+  formatHomeroom,
+} from "./teacher-content";
 import {
   DeleteButton,
   EditLink,
@@ -20,6 +42,7 @@ import {
   PageTitle,
   Pager,
   PrimaryLink,
+  RetryButton,
   RowActions,
   SearchButton,
   SearchInput,
@@ -31,43 +54,107 @@ import {
 
 const PAGE_SIZE = 5;
 
+// 과목 필터 선택지 (Figma 순서)
+const FILTER_SUBJECTS: TeacherSubject[] = [
+  "MATH",
+  "JAVA",
+  "ENGLISH",
+  "ALGEBRA",
+  "MUSIC",
+];
+
 export default function TeacherListPage() {
-  const [teachers, setTeachers] = useState(TEACHERS);
+  const router = useRouter();
+  // 지금 보이는 한 페이지. 처음 불러오기 전에는 null이고,
+  // 페이지를 넘기거나 검색하는 동안에는 이전 결과를 그대로 보여 줌
+  const [data, setData] = useState<PageResponse<TeacherResponse> | null>(
+    null,
+  );
+  const [loadError, setLoadError] = useState("");
+  // 바뀌면 목록을 다시 불러옴 (다시 시도 · 삭제 후)
+  const [reloadKey, setReloadKey] = useState(0);
   const [keyword, setKeyword] = useState("");
   const [grade, setGrade] = useState("all");
   const [classNumber, setClassNumber] = useState("all");
-  const [subject, setSubject] = useState("all");
+  const [subject, setSubject] = useState<TeacherSubject | "all">("all");
   const [office, setOffice] = useState("");
   const [query, setQuery] = useState({
     keyword: "",
     grade: "all",
     classNumber: "all",
-    subject: "all",
+    subject: "all" as TeacherSubject | "all",
     office: "",
   });
   const [page, setPage] = useState(1);
-  const [deleteTarget, setDeleteTarget] = useState<
-    (typeof TEACHERS)[number] | null
-  >(null);
+  const [deleteTarget, setDeleteTarget] = useState<TeacherResponse | null>(
+    null,
+  );
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const filtered = teachers.filter(
-    (teacher) =>
-      (!query.keyword || teacher.name.includes(query.keyword)) &&
-      (query.grade === "all" || String(teacher.grade) === query.grade) &&
-      (query.classNumber === "all" ||
-        String(teacher.classNumber) === query.classNumber) &&
-      (query.subject === "all" || teacher.subject === query.subject) &&
-      (!query.office || teacher.office.includes(query.office)),
-  );
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // 교직원 API가 이름 · 학년 · 반 · 과목 · 교무실 검색과 페이지 나누기를 다 받아서
+  // 지금 페이지만 서버에서 받음. 다른 화면에서 돌아와 다시 보일 때도 다시 돌아 최신 목록을 받음
+  useEffect(() => {
+    // 로그인 여부는 저장소를 읽어야 해서 렌더 중이 아니라 effect에서 확인
+    if (!api.auth.isLoggedIn()) {
+      router.replace("/login");
+      return;
+    }
+    const request = new AbortController();
+    fetchTeachers(
+      {
+        name: query.keyword,
+        grade: query.grade === "all" ? undefined : Number(query.grade),
+        classNum:
+          query.classNumber === "all" ? undefined : Number(query.classNumber),
+        subject: query.subject === "all" ? undefined : query.subject,
+        office: query.office,
+        // 화면은 1부터, 서버는 0부터 셈
+        page: page - 1,
+        size: PAGE_SIZE,
+      },
+      request.signal,
+    )
+      .then((loaded) => {
+        // 그 사이 교직원이 지워져 지금 페이지가 비면 마지막 페이지로 옮김
+        if (
+          loaded.content.length === 0 &&
+          page > 1 &&
+          loaded.totalPage < page
+        ) {
+          setPage(Math.max(1, loaded.totalPage));
+          return;
+        }
+        setData(loaded);
+        setLoadError("");
+      })
+      .catch((error: unknown) => {
+        if (isAbortError(error) || request.signal.aborted) return;
+        setLoadError(
+          errorMessage(error, "교직원 목록을 불러오지 못했습니다."),
+        );
+      });
+    return () => request.abort();
+  }, [router, query, page, reloadKey]);
+
+  // 다른 페이지로 이동해도 화면이 숨겨진 채 상태가 남으므로,
+  // 열려 있던 삭제 모달이 돌아왔을 때 다시 뜨지 않도록 숨겨질 때 닫음
+  useLayoutEffect(() => {
+    return () => setDeleteTarget(null);
+  }, []);
+
+  // 불러오지 못했으면 이전 결과 대신 실패 문구를 보여 줌
+  const rows = loadError ? [] : (data?.content ?? []);
+  const pageCount = Math.max(1, data?.totalPage ?? 1);
   const currentPage = Math.min(page, pageCount);
-  const rows = filtered.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
-  );
+
+  const changePage = (nextPage: number) => {
+    setLoadError("");
+    setPage(nextPage);
+  };
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setLoadError("");
     setQuery({
       keyword: keyword.trim(),
       grade,
@@ -76,14 +163,6 @@ export default function TeacherListPage() {
       office: office.trim(),
     });
     setPage(1);
-  };
-
-  const confirmDelete = () => {
-    if (!deleteTarget) return;
-    setTeachers((current) =>
-      current.filter((teacher) => teacher.id !== deleteTarget.id),
-    );
-    setDeleteTarget(null);
   };
 
   return (
@@ -98,6 +177,7 @@ export default function TeacherListPage() {
 
       <FilterBar role="search" onSubmit={handleSearch}>
         <SearchInput
+          ref={searchInputRef}
           type="search"
           value={keyword}
           placeholder="이름으로 검색"
@@ -110,9 +190,11 @@ export default function TeacherListPage() {
           onChange={(event) => setGrade(event.target.value)}
         >
           <option value="all">학년 전체</option>
-          <option value="1">1학년</option>
-          <option value="2">2학년</option>
-          <option value="3">3학년</option>
+          {TEACHER_GRADES.map((option) => (
+            <option key={option} value={option}>
+              {option}학년
+            </option>
+          ))}
         </FilterSelect>
         <FilterSelect
           aria-label="반 필터"
@@ -120,21 +202,25 @@ export default function TeacherListPage() {
           onChange={(event) => setClassNumber(event.target.value)}
         >
           <option value="all">반 전체</option>
-          <option value="1">1반</option>
-          <option value="2">2반</option>
-          <option value="3">3반</option>
+          {TEACHER_CLASS_NUMBERS.map((option) => (
+            <option key={option} value={option}>
+              {option}반
+            </option>
+          ))}
         </FilterSelect>
         <FilterSelect
           aria-label="과목 필터"
           value={subject}
-          onChange={(event) => setSubject(event.target.value)}
+          onChange={(event) =>
+            setSubject(event.target.value as TeacherSubject | "all")
+          }
         >
           <option value="all">과목 전체</option>
-          <option value="수학">수학</option>
-          <option value="자바">자바</option>
-          <option value="영어">영어</option>
-          <option value="대수">대수</option>
-          <option value="음악">음악</option>
+          {FILTER_SUBJECTS.map((option) => (
+            <option key={option} value={option}>
+              {TEACHER_SUBJECT_LABELS[option]}
+            </option>
+          ))}
         </FilterSelect>
         <OfficeInput
           value={office}
@@ -168,23 +254,31 @@ export default function TeacherListPage() {
             <tr key={teacher.id}>
               <td>{teacher.name}</td>
               <td>
-                {teacher.grade ? (
-                  `${teacher.grade}학년 ${teacher.classNumber}반`
-                ) : (
-                  <Unassigned>담임 아님</Unassigned>
-                )}
+                {formatHomeroom(teacher) ?? <Unassigned>담임 아님</Unassigned>}
               </td>
-              <td>{teacher.subject}</td>
-              <td>{teacher.office}</td>
-              <td>{teacher.position}</td>
               <td>
-                {teacher.club === "없음" ? (
-                  <Unassigned>없음</Unassigned>
+                {teacher.subject ? (
+                  TEACHER_SUBJECT_LABELS[teacher.subject]
                 ) : (
-                  teacher.club
+                  <Unassigned>없음</Unassigned>
                 )}
               </td>
-              <td>{teacher.isClubLeader && <LeaderBadge>부장</LeaderBadge>}</td>
+              <td>{teacher.office}</td>
+              <td>
+                {teacher.position ? (
+                  TEACHER_POSITION_LABELS[teacher.position]
+                ) : (
+                  <Unassigned>없음</Unassigned>
+                )}
+              </td>
+              <td>
+                {teacher.club ? (
+                  teacher.club.name
+                ) : (
+                  <Unassigned>없음</Unassigned>
+                )}
+              </td>
+              <td>{teacher.isManager && <LeaderBadge>부장</LeaderBadge>}</td>
               <td>
                 <RowActions>
                   <EditLink href={`/teacher/${teacher.id}/edit`}>수정</EditLink>
@@ -200,19 +294,38 @@ export default function TeacherListPage() {
           ))}
           {rows.length === 0 && (
             <tr>
-              <EmptyCell colSpan={8}>검색 결과가 없습니다.</EmptyCell>
+              <EmptyCell colSpan={8}>
+                {loadError ? (
+                  <CellStatus role="alert">
+                    {loadError}
+                    <RetryButton
+                      type="button"
+                      onClick={() => {
+                        setLoadError("");
+                        setReloadKey((key) => key + 1);
+                      }}
+                    >
+                      다시 시도
+                    </RetryButton>
+                  </CellStatus>
+                ) : data === null ? (
+                  "교직원 목록을 불러오는 중입니다."
+                ) : (
+                  "검색 결과가 없습니다."
+                )}
+              </EmptyCell>
             </tr>
           )}
         </tbody>
       </TeacherTable>
 
       <Pager>
-        <Total role="status">전체 {filtered.length}명</Total>
+        <Total role="status">전체 {data?.totalCount ?? 0}명</Total>
         <PageList aria-label="페이지">
           <PageButton
             type="button"
             disabled={currentPage === 1}
-            onClick={() => setPage(currentPage - 1)}
+            onClick={() => changePage(currentPage - 1)}
           >
             이전
           </PageButton>
@@ -222,7 +335,7 @@ export default function TeacherListPage() {
                 key={pageNumber}
                 type="button"
                 aria-current={pageNumber === currentPage ? "page" : undefined}
-                onClick={() => setPage(pageNumber)}
+                onClick={() => changePage(pageNumber)}
               >
                 {pageNumber}
               </PageButton>
@@ -231,7 +344,7 @@ export default function TeacherListPage() {
           <PageButton
             type="button"
             disabled={currentPage === pageCount}
-            onClick={() => setPage(currentPage + 1)}
+            onClick={() => changePage(currentPage + 1)}
           >
             다음
           </PageButton>
@@ -239,28 +352,25 @@ export default function TeacherListPage() {
       </Pager>
 
       {deleteTarget && (
-        <DeleteModal
-          title={`${deleteTarget.name} 교직원을 삭제할까요?`}
-          relations={[
-            {
-              title: `담당 동아리 ${deleteTarget.club}`,
-              description: `${deleteTarget.club}의 담당 선생님이 미지정으로 바뀝니다`,
-            },
-            {
-              title: "자습 감독 배정",
-              description: "해당 교직원의 자습 감독 배정이 함께 정리됩니다",
-            },
-            ...(deleteTarget.grade
-              ? [
-                  {
-                    title: `${deleteTarget.grade}학년 ${deleteTarget.classNumber}반 담임`,
-                    description: "담임 정보가 함께 지워집니다",
-                  },
-                ]
-              : []),
-          ]}
-          onCancel={() => setDeleteTarget(null)}
-          onConfirm={confirmDelete}
+        <DeleteTeacherModal
+          teacher={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={() => {
+            // 지운 행은 바로 빼고, 그 사이 바뀐 내용까지 맞추도록 목록을 다시 받음
+            setData(
+              (prev) =>
+                prev && {
+                  ...prev,
+                  content: prev.content.filter(
+                    (teacher) => teacher.id !== deleteTarget.id,
+                  ),
+                  totalCount: prev.totalCount - 1,
+                },
+            );
+            setReloadKey((key) => key + 1);
+            // 지운 행의 삭제 버튼이 사라져 포커스가 갈 곳이 없으므로 검색창으로 옮김
+            searchInputRef.current?.focus();
+          }}
         />
       )}
     </TeacherPage>
